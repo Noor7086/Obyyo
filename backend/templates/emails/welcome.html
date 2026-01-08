@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Obyyo Lottery Prediction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4a90e2;
+        }
+        .logo-img {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4a90e2;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        .tagline {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #4a90e2;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #357abd;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .trial-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #4a90e2;
+        }
+        .trial-info h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .highlight {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+        .info-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+        .info-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {{logoUrl}}
+            <div class="tagline">Premium Lottery Predictions & Analytics</div>
+        </div>
+        
+        <div class="content">
+            <h2>Welcome, {{firstName}}</h2>
+            
+            <p>Thank you for registering with Obyyo Lottery Prediction. We are pleased to have you as a member of our community.</p>
+            
+            <p>Your account has been successfully created with the following information:</p>
+            
+            <ul class="info-list">
+                <li><strong>Full Name:</strong> {{firstName}} {{lastName}}</li>
+                <li><strong>Email Address:</strong> {{email}}</li>
+                <li><strong>Selected Lottery:</strong> {{selectedLottery}}</li>
+            </ul>
+            
+            <div class="trial-info">
+                <h3>Free Trial Period</h3>
+                <p>As a new member, you have been granted a <span class="highlight">7-day complimentary trial</span> to access our premium lottery prediction services.</p>
+                <p><strong>Trial Period:</strong> {{trialStartDate}} through {{trialEndDate}}</p>
+                <p>During your trial period, you will have access to up to 3 complimentary predictions for your selected lottery type. This allows you to experience the quality and accuracy of our prediction system before making any commitment.</p>
+            </div>
+            
+            <p>To begin exploring our predictions and analytics, please log in to your account using the button below:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{loginUrl}}" class="button">Access Your Account</a>
+            </div>
+            
+            <p>If you have any questions, require assistance, or would like to learn more about our services, please do not hesitate to contact our support team. We are here to help you make the most of your experience with Obyyo Lottery Prediction.</p>
+            
+            <p>Sincerely,<br>
+            <strong>The Obyyo Lottery Prediction Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated email. Please do not reply to this message.</p>
+            <p>&copy; 2024 Obyyo Lottery Prediction. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

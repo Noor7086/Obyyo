@@ -1,0 +1,13 @@
+# LOTTERY VIDEO BACKGROUND PLACEHOLDER
+# 
+# This file should be replaced with an actual MP4 video file.
+# 
+# Current Status: Using CSS fallback animations
+# 
+# To add a real lottery video:
+# 1. Find a lottery-themed video (see README.md in this folder)
+# 2. Rename it to "hero-background.mp4"
+# 3. Replace this file
+# 
+# The component will automatically detect and use the video,
+# or fall back to CSS animations if no video is available.
