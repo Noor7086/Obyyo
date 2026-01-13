@@ -585,55 +585,14 @@ const Predictions: React.FC = () => {
 
   // Helper function to calculate viable numbers from non-viable numbers
   const calculateViableFromNonViable = (lotteryType: LotteryType, nonViableMain: number[], nonViableBonus: number[] = []): any => {
-    let totalMain: number, totalBonus: number;
-
-    switch (lotteryType) {
-      case 'powerball':
-        totalMain = 69;
-        totalBonus = 26;
-        break;
-      case 'megamillion':
-        totalMain = 70;
-        totalBonus = 25;
-        break;
-      case 'lottoamerica':
-        totalMain = 52;
-        totalBonus = 10;
-        break;
-      case 'gopher5':
-        totalMain = 47;
-        totalBonus = 0;
-        break;
-      case 'pick3':
-        totalMain = 10; // 0-9
-        totalBonus = 0;
-        break;
-      default:
-        return null;
-    }
-
-    // Calculate viable numbers = all numbers - non-viable numbers
-    const viableMain: number[] = [];
-    const startNum = lotteryType === 'pick3' ? 0 : 1;
-    for (let i = startNum; i < startNum + totalMain; i++) {
-      if (!nonViableMain.includes(i)) {
-        viableMain.push(i);
-      }
-    }
-
-    const viableBonus: number[] = [];
-    if (totalBonus > 0) {
-      for (let i = 1; i <= totalBonus; i++) {
-        if (!nonViableBonus.includes(i)) {
-          viableBonus.push(i);
-        }
-      }
-    }
+    // NOTE: User requested to show "Non Viable Numbers" in the UI section labeled "Non Viable"
+    // Previously, this calculated "Viable" (Total - NonViable). 
+    // Now, we simply return the NonViable numbers directly so they are displayed.
 
     if (lotteryType === 'powerball' || lotteryType === 'megamillion' || lotteryType === 'lottoamerica') {
-      return { whiteBalls: viableMain, redBalls: viableBonus };
+      return { whiteBalls: nonViableMain, redBalls: nonViableBonus };
     } else {
-      return viableMain;
+      return nonViableMain;
     }
   };
 

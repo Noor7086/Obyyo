@@ -43,7 +43,7 @@ const MyPredictions: React.FC = () => {
       toast.error('Prediction data is incomplete. Cannot load details.');
       return;
     }
-    
+
     try {
       setSelectedPurchase(purchase);
       setLoadingDetails(true);
@@ -65,10 +65,10 @@ const MyPredictions: React.FC = () => {
     if (!purchase.prediction || !purchase.prediction.drawDate) {
       return 'active';
     }
-    
+
     const drawDate = new Date(purchase.prediction.drawDate);
     const now = new Date();
-    
+
     if (drawDate < now) {
       return 'completed';
     } else if (drawDate.toDateString() === now.toDateString()) {
@@ -78,7 +78,7 @@ const MyPredictions: React.FC = () => {
     }
   };
 
-  const filteredPurchases = selectedFilter === 'all' 
+  const filteredPurchases = selectedFilter === 'all'
     ? purchases.filter(p => p.prediction) // Filter out purchases with null predictions
     : purchases.filter(purchase => purchase.prediction && getPredictionStatus(purchase) === selectedFilter);
 
@@ -95,55 +95,14 @@ const MyPredictions: React.FC = () => {
 
   // Helper function to calculate viable numbers from non-viable numbers
   const calculateViableFromNonViable = (lotteryType: LotteryType, nonViableMain: number[], nonViableBonus: number[] = []): any => {
-    let totalMain: number, totalBonus: number;
-    
-    switch(lotteryType) {
-      case 'powerball':
-        totalMain = 69;
-        totalBonus = 26;
-        break;
-      case 'megamillion':
-        totalMain = 70;
-        totalBonus = 25;
-        break;
-      case 'lottoamerica':
-        totalMain = 52;
-        totalBonus = 10;
-        break;
-      case 'gopher5':
-        totalMain = 47;
-        totalBonus = 0;
-        break;
-      case 'pick3':
-        totalMain = 10; // 0-9
-        totalBonus = 0;
-        break;
-      default:
-        return null;
-    }
-    
-    // Calculate viable numbers = all numbers - non-viable numbers
-    const viableMain: number[] = [];
-    const startNum = lotteryType === 'pick3' ? 0 : 1;
-    for (let i = startNum; i < startNum + totalMain; i++) {
-      if (!nonViableMain.includes(i)) {
-        viableMain.push(i);
-      }
-    }
-    
-    const viableBonus: number[] = [];
-    if (totalBonus > 0) {
-      for (let i = 1; i <= totalBonus; i++) {
-        if (!nonViableBonus.includes(i)) {
-          viableBonus.push(i);
-        }
-      }
-    }
-    
+    // NOTE: User requested to show "Non Viable Numbers" in the UI section labeled "Non Viable"
+    // Previously, this calculated "Viable" (Total - NonViable). 
+    // Now, we simply return the NonViable numbers directly so they are displayed.
+
     if (lotteryType === 'powerball' || lotteryType === 'megamillion' || lotteryType === 'lottoamerica') {
-      return { whiteBalls: viableMain, redBalls: viableBonus };
+      return { whiteBalls: nonViableMain, redBalls: nonViableBonus };
     } else {
-      return viableMain;
+      return nonViableMain;
     }
   };
 
@@ -164,7 +123,7 @@ const MyPredictions: React.FC = () => {
         }
       }
     }
-    
+
     // Fallback: Calculate viable numbers from non-viable numbers if viableNumbers is empty or missing
     if (prediction.lotteryType === 'powerball' || prediction.lotteryType === 'megamillion' || prediction.lotteryType === 'lottoamerica') {
       // Double selection lotteries
@@ -195,7 +154,7 @@ const MyPredictions: React.FC = () => {
         }
       }
     }
-    
+
     return null;
   };
 
@@ -348,10 +307,10 @@ const MyPredictions: React.FC = () => {
                 if (!purchase.prediction) {
                   return null; // Skip purchases without prediction data
                 }
-                
+
                 const prediction = purchase.prediction;
                 const status = getPredictionStatus(purchase);
-                
+
                 return (
                   <div key={purchase.id} className="col-12">
                     <div className="card border-0 shadow-sm">
@@ -368,7 +327,7 @@ const MyPredictions: React.FC = () => {
                               <div>
                                 <h5 className="fw-bold mb-1">{prediction.lotteryDisplayName}</h5>
                                 <div className="small text-muted">
-                                  {purchase.paymentStatus === 'trial' || purchase.isTrialView ? 'Viewed' : 'Purchased'}: {new Date(purchase.createdAt).toLocaleDateString()} • 
+                                  {purchase.paymentStatus === 'trial' || purchase.isTrialView ? 'Viewed' : 'Purchased'}: {new Date(purchase.createdAt).toLocaleDateString()} •
                                   Draw: {new Date(prediction.drawDate).toLocaleDateString()} at {prediction.drawTime}
                                 </div>
                                 <div className="small text-muted">
@@ -403,11 +362,11 @@ const MyPredictions: React.FC = () => {
                             {(() => {
                               const viableData = formatViableNumbers(prediction);
                               const isDoubleType = viableData && typeof viableData === 'object' && !Array.isArray(viableData);
-                              
+
                               if (!viableData) {
                                 return null;
                               }
-                              
+
                               if (isDoubleType) {
                                 const whiteBalls = (viableData as any).whiteBalls || [];
                                 const redBalls = (viableData as any).redBalls || [];
@@ -470,7 +429,7 @@ const MyPredictions: React.FC = () => {
                             )}
 
                             <div className="d-flex gap-2">
-                              <button 
+                              <button
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={() => handleViewDetails(purchase)}
                               >
@@ -497,7 +456,7 @@ const MyPredictions: React.FC = () => {
               <i className="bi bi-inbox fs-1 text-muted mb-3"></i>
               <h5 className="fw-bold mb-3">No Predictions Found</h5>
               <p className="text-muted mb-4">
-                {selectedFilter === 'all' 
+                {selectedFilter === 'all'
                   ? "You haven't purchased any predictions yet."
                   : `No ${selectedFilter} predictions found.`
                 }
@@ -512,14 +471,14 @@ const MyPredictions: React.FC = () => {
       </div>
 
       {/* Prediction Details Modal */}
-      <Modal 
-        show={showDetailsModal} 
+      <Modal
+        show={showDetailsModal}
         onHide={() => {
           setShowDetailsModal(false);
           setPredictionDetails(null);
           setSelectedPurchase(null);
-        }} 
-        centered 
+        }}
+        centered
         size="lg"
       >
         <Modal.Header closeButton className="bg-success text-white">
@@ -546,7 +505,7 @@ const MyPredictions: React.FC = () => {
                 </p>
                 {selectedPurchase && (
                   <p className="text-muted">
-                    Purchased: {new Date(selectedPurchase.createdAt).toLocaleDateString()} • 
+                    Purchased: {new Date(selectedPurchase.createdAt).toLocaleDateString()} •
                     Amount: <strong>${selectedPurchase.amount?.toFixed(2) || predictionDetails.price?.toFixed(2)}</strong>
                   </p>
                 )}
@@ -565,7 +524,7 @@ const MyPredictions: React.FC = () => {
               {(() => {
                 const viableData = formatViableNumbers(predictionDetails);
                 const isDouble = viableData && typeof viableData === 'object' && !Array.isArray(viableData);
-                
+
                 if (isDouble && viableData) {
                   const whiteBalls = (viableData as any).whiteBalls || [];
                   const redBalls = (viableData as any).redBalls || [];
@@ -661,8 +620,8 @@ const MyPredictions: React.FC = () => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="success" 
+          <Button
+            variant="success"
             onClick={() => {
               setShowDetailsModal(false);
               setPredictionDetails(null);

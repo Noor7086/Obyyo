@@ -4,56 +4,16 @@ import User from '../models/User.js';
 import { validationResult } from 'express-validator';
 
 // Helper function to calculate viable numbers from non-viable numbers
+// Helper function to calculate viable numbers from non-viable numbers
 const calculateViableFromNonViable = (lotteryType, nonViableMain, nonViableBonus = []) => {
-  let totalMain, totalBonus;
-  
-  switch(lotteryType) {
-    case 'powerball':
-      totalMain = 69;
-      totalBonus = 26;
-      break;
-    case 'megamillion':
-      totalMain = 70;
-      totalBonus = 25;
-      break;
-    case 'lottoamerica':
-      totalMain = 52;
-      totalBonus = 10;
-      break;
-    case 'gopher5':
-      totalMain = 47;
-      totalBonus = 0;
-      break;
-    case 'pick3':
-      totalMain = 10; // 0-9
-      totalBonus = 0;
-      break;
-    default:
-      return null;
-  }
-  
-  // Calculate viable numbers = all numbers - non-viable numbers
-  const viableMain = [];
-  const startNum = lotteryType === 'pick3' ? 0 : 1;
-  for (let i = startNum; i < startNum + totalMain; i++) {
-    if (!nonViableMain.includes(i)) {
-      viableMain.push(i);
-    }
-  }
-  
-  const viableBonus = [];
-  if (totalBonus > 0) {
-    for (let i = 1; i <= totalBonus; i++) {
-      if (!nonViableBonus.includes(i)) {
-        viableBonus.push(i);
-      }
-    }
-  }
-  
+  // NOTE: User requested to show "Non Viable Numbers" in the UI section labeled "Non Viable"
+  // Previously, this calculated "Viable" (Total - NonViable). 
+  // Now, we simply return the NonViable numbers directly so they are displayed.
+
   if (lotteryType === 'powerball' || lotteryType === 'megamillion' || lotteryType === 'lottoamerica') {
-    return { whiteBalls: viableMain, redBalls: viableBonus };
+    return { whiteBalls: nonViableMain, redBalls: nonViableBonus };
   } else {
-    return viableMain;
+    return nonViableMain;
   }
 };
 
@@ -90,10 +50,10 @@ const getPredictions = async (req, res) => {
       isActive: true,
       drawDate: { $gte: today }
     })
-    .populate('uploadedBy', 'firstName lastName')
-    .sort({ drawDate: 1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+      .populate('uploadedBy', 'firstName lastName')
+      .sort({ drawDate: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
 
     const total = await Prediction.countDocuments({
       lotteryType,
@@ -144,7 +104,7 @@ const getPredictionDetails = async (req, res) => {
       id: req.params.id,
       userId: req.user.userId
     });
-    
+
     const { lotteryType, id } = req.params;
     const userId = req.user.userId;
 
@@ -172,7 +132,7 @@ const getPredictionDetails = async (req, res) => {
         message: 'User not found'
       });
     }
-    
+
     console.log('🔍 User data loaded:', {
       userId: user._id.toString(),
       selectedLottery: user.selectedLottery,
@@ -203,7 +163,7 @@ const getPredictionDetails = async (req, res) => {
       // First check if user is in trial period
       let isInTrial = false;
       const now = new Date();
-      
+
       // Check trialEndDate first (most reliable)
       if (user.trialEndDate) {
         const trialEnd = new Date(user.trialEndDate);
@@ -218,7 +178,7 @@ const getPredictionDetails = async (req, res) => {
       } else {
         console.log('❌ No trialEndDate found for user');
       }
-      
+
       // Also try the method if it exists (fallback)
       if (!isInTrial && user.isInTrial && typeof user.isInTrial === 'function') {
         try {
@@ -231,10 +191,10 @@ const getPredictionDetails = async (req, res) => {
           console.error('Error calling isInTrial() method:', error);
         }
       }
-      
+
       const userSelectedLottery = user.selectedLottery?.toLowerCase();
       const requestedLotteryType = lotteryType?.toLowerCase();
-      
+
       // Debug logging
       console.log('🔍 SIMPLE Trial check:', {
         userId: user._id.toString(),
@@ -258,19 +218,19 @@ const getPredictionDetails = async (req, res) => {
         lotteryMatches: userSelectedLottery === requestedLotteryType,
         allMet: isInTrial && userSelectedLottery && userSelectedLottery === requestedLotteryType
       };
-      
+
       console.log('🔍 Final conditions check:', conditionsCheck);
-      
+
       if (conditionsCheck.allMet) {
         console.log('✅ Trial conditions MET - proceeding with access check');
-        
+
         // First, check if user has already viewed THIS SPECIFIC prediction
         trialPurchase = await Purchase.findOne({
           user: userId,
           prediction: id,
           paymentStatus: 'trial'
         });
-        
+
         if (trialPurchase) {
           // User has already viewed this specific prediction - allow re-viewing
           console.log('✅ User re-viewing same prediction - allowing access');
@@ -298,7 +258,7 @@ const getPredictionDetails = async (req, res) => {
           isTrialAccess = true;
           user.lastTrialPredictionDate = new Date();
           await user.save();
-          
+
           // Create a Purchase record for trial view so it shows in "My Predictions"
           trialPurchase = await Purchase.create({
             user: userId,
@@ -332,10 +292,10 @@ const getPredictionDetails = async (req, res) => {
       if (!isInTrialCheck && user.isInTrial && typeof user.isInTrial === 'function') {
         isInTrialCheck = user.isInTrial();
       }
-      
+
       const userSelectedLottery = user.selectedLottery?.toLowerCase();
       const requestedLotteryType = lotteryType?.toLowerCase();
-      
+
       // Enhanced error message with debug info
       console.log('═══════════════════════════════════════════════════════════');
       console.log('❌❌❌ ACCESS DENIED - RETURNING 403 ❌❌❌');
@@ -355,7 +315,7 @@ const getPredictionDetails = async (req, res) => {
         trialEndIfExists: user.trialEndDate ? new Date(user.trialEndDate).toISOString() : null
       });
       console.log('═══════════════════════════════════════════════════════════');
-      
+
       // Give specific error messages
       if (isInTrialCheck && userSelectedLottery && userSelectedLottery !== requestedLotteryType) {
         console.log('❌ Returning 403: Lottery mismatch');
@@ -364,7 +324,7 @@ const getPredictionDetails = async (req, res) => {
           message: `This prediction is for ${lotteryType}, but your trial is for ${user.selectedLottery}. Please select your trial lottery to view free predictions.`
         });
       }
-      
+
       if (isInTrialCheck && !userSelectedLottery) {
         console.log('❌ Returning 403: No selected lottery');
         return res.status(403).json({
@@ -372,7 +332,7 @@ const getPredictionDetails = async (req, res) => {
           message: 'You are in trial but no lottery is selected. Please contact support.'
         });
       }
-      
+
       if (!isInTrialCheck && user.trialEndDate) {
         const trialEnd = new Date(user.trialEndDate);
         const now = new Date();
@@ -382,7 +342,7 @@ const getPredictionDetails = async (req, res) => {
           message: `Your trial has expired. Trial ended on ${trialEnd.toLocaleDateString()}. Please purchase predictions to continue.`
         });
       }
-      
+
       console.log('❌ Returning 403: Generic "need to purchase" message');
       return res.status(403).json({
         success: false,
@@ -392,13 +352,13 @@ const getPredictionDetails = async (req, res) => {
 
     // Update download count - only increment prediction count on first download per user
     let isFirstDownload = false;
-    
+
     if (purchase) {
       const previousDownloadCount = purchase.downloadCount || 0;
       purchase.downloadCount += 1;
       purchase.lastDownloaded = new Date();
       await purchase.save();
-      
+
       // Only increment prediction download count if this is the first download by this user
       if (previousDownloadCount === 0) {
         isFirstDownload = true;
@@ -409,7 +369,7 @@ const getPredictionDetails = async (req, res) => {
       trialPurchase.downloadCount += 1;
       trialPurchase.lastDownloaded = new Date();
       await trialPurchase.save();
-      
+
       // Only increment prediction download count if this is the first download by this user
       if (previousDownloadCount === 0) {
         isFirstDownload = true;
@@ -430,17 +390,17 @@ const getPredictionDetails = async (req, res) => {
 
     // ONLY GET viableNumbers - these are the recommended numbers
     let viableNumbers = null;
-    
+
     // Get the raw document as plain object
     const pred = prediction.toObject ? prediction.toObject() : prediction;
-    
+
     // Check lottery type and get viableNumbers
     // ALWAYS prefer calculating from non-viable numbers if they exist (source of truth)
     if (prediction.lotteryType === 'powerball' || prediction.lotteryType === 'megamillion' || prediction.lotteryType === 'lottoamerica') {
       // Double selection lotteries
       const nonViableWhite = pred.nonViableNumbers?.whiteBalls || [];
       const nonViableRed = pred.nonViableNumbers?.redBalls || [];
-      
+
       // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
       if (nonViableWhite.length > 0 || nonViableRed.length > 0) {
         console.log('✅ Calculating viable numbers from non-viable numbers (source of truth)');
@@ -458,7 +418,7 @@ const getPredictionDetails = async (req, res) => {
     } else if (prediction.lotteryType === 'gopher5') {
       // Single selection
       const nonViableSingle = pred.nonViableNumbersSingle || [];
-      
+
       // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
       if (nonViableSingle.length > 0) {
         console.log('✅ Calculating viable numbers from non-viable numbers (source of truth)');
@@ -471,7 +431,7 @@ const getPredictionDetails = async (req, res) => {
     } else if (prediction.lotteryType === 'pick3') {
       // Pick 3
       const nonViablePick3 = pred.nonViableNumbersPick3 || [];
-      
+
       // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
       if (nonViablePick3.length > 0) {
         console.log('✅ Calculating viable numbers from non-viable numbers (source of truth)');
@@ -482,7 +442,7 @@ const getPredictionDetails = async (req, res) => {
         console.log('⚠️ Using viableNumbersPick3 field (non-viable not found)');
       }
     }
-    
+
     console.log('=== SIMPLE PREDICTION DETAILS ===');
     console.log('Lottery Type:', prediction.lotteryType);
     console.log('Viable Numbers Found:', JSON.stringify(viableNumbers, null, 2));
@@ -654,10 +614,10 @@ const getMyPurchases = async (req, res) => {
       user: userId,
       paymentStatus: { $in: ['completed', 'trial'] }
     })
-    .populate('prediction')
-    .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+      .populate('prediction')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
 
     const total = await Purchase.countDocuments({
       user: userId,
@@ -669,23 +629,23 @@ const getMyPurchases = async (req, res) => {
       .filter(purchase => purchase.prediction) // Filter out purchases with deleted predictions
       .map(purchase => {
         const prediction = purchase.prediction;
-        
+
         // Double check prediction exists
         if (!prediction) {
           return null;
         }
-        
+
         // ONLY GET viableNumbers - these are the recommended numbers
         let viableNumbers = null;
         const pred = prediction.toObject ? prediction.toObject() : prediction;
-        
+
         // Check lottery type and get viableNumbers
         // ALWAYS prefer calculating from non-viable numbers if they exist (source of truth)
         if (prediction.lotteryType === 'powerball' || prediction.lotteryType === 'megamillion' || prediction.lotteryType === 'lottoamerica') {
           // Double selection lotteries
           const nonViableWhite = pred.nonViableNumbers?.whiteBalls || [];
           const nonViableRed = pred.nonViableNumbers?.redBalls || [];
-          
+
           // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
           if (nonViableWhite.length > 0 || nonViableRed.length > 0) {
             viableNumbers = calculateViableFromNonViable(prediction.lotteryType, nonViableWhite, nonViableRed);
@@ -701,7 +661,7 @@ const getMyPurchases = async (req, res) => {
         } else if (prediction.lotteryType === 'gopher5') {
           // Single selection
           const nonViableSingle = pred.nonViableNumbersSingle || [];
-          
+
           // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
           if (nonViableSingle.length > 0) {
             viableNumbers = calculateViableFromNonViable(prediction.lotteryType, nonViableSingle);
@@ -712,7 +672,7 @@ const getMyPurchases = async (req, res) => {
         } else if (prediction.lotteryType === 'pick3') {
           // Pick 3
           const nonViablePick3 = pred.nonViableNumbersPick3 || [];
-          
+
           // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
           if (nonViablePick3.length > 0) {
             viableNumbers = calculateViableFromNonViable(prediction.lotteryType, nonViablePick3);
@@ -721,7 +681,7 @@ const getMyPurchases = async (req, res) => {
             viableNumbers = pred.viableNumbersPick3.filter(n => n != null && n !== undefined);
           }
         }
-        
+
         return {
           id: purchase._id,
           user: purchase.user,
@@ -804,9 +764,9 @@ const getTrialPredictions = async (req, res) => {
       isActive: true,
       drawDate: { $gte: today }
     })
-    .populate('uploadedBy', 'firstName lastName')
-    .sort({ drawDate: 1 })
-    .limit(5);
+      .populate('uploadedBy', 'firstName lastName')
+      .sort({ drawDate: 1 })
+      .limit(5);
 
     res.json({
       success: true,

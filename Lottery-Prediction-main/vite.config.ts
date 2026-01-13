@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     // Force inject the variable to avoid .env loading issues
-    'import.meta.env.VITE_PAYPAL_CLIENT_ID': JSON.stringify("AedpuqKn9fKTF4VBBiQxp_R0eI2ejZUVcuYzLsxRw8KNIXuT960lA82HFIyuaQiXeV75AvtsccDogAqQ"),
+    'import.meta.env.VITE_PAYPAL_CLIENT_ID': JSON.stringify("ATUnS0mGv-nNpE7-IJxHsNCsCtfW8EzBc2jti4-duiiKcRd2_BMHsV1syU4D87caNKhxBhWb3NnGBWcO"),
   },
   server: {
     port: 3000,

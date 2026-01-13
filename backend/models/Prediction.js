@@ -97,7 +97,7 @@ predictionSchema.index({ lotteryType: 1, drawDate: 1 });
 predictionSchema.index({ isActive: 1, drawDate: 1 });
 
 // Virtual for lottery display name
-predictionSchema.virtual('lotteryDisplayName').get(function() {
+predictionSchema.virtual('lotteryDisplayName').get(function () {
   const lotteryNames = {
     'gopher5': 'Gopher 5 (Minnesota)',
     'pick3': 'Pick 3 (Minnesota)',
@@ -109,56 +109,33 @@ predictionSchema.virtual('lotteryDisplayName').get(function() {
 });
 
 // Method to get viable numbers based on lottery type (preferred)
-predictionSchema.methods.getViableNumbers = function() {
+// Method to get viable numbers based on lottery type (preferred)
+predictionSchema.methods.getViableNumbers = function () {
   // Convert to plain object if it's a Mongoose document (for consistent access)
   const self = this.toObject ? this.toObject() : this;
-  
+
+  // NOTE: User requested to show "Non Viable Numbers" in the UI section labeled "Non Viable"
+  // Previously, this calculated "Viable" (Total - NonViable). 
+  // Now, we simply return the NonViable numbers directly so they are displayed.
+
   switch (this.lotteryType) {
     case 'powerball':
     case 'megamillion':
     case 'lottoamerica':
-      // First check viableNumbers (new format)
-      if (self.viableNumbers && typeof self.viableNumbers === 'object') {
-        // Handle both Mongoose subdocuments and plain objects
-        const whiteBalls = self.viableNumbers.whiteBalls ? 
-          (Array.isArray(self.viableNumbers.whiteBalls) ? self.viableNumbers.whiteBalls : []) : [];
-        const redBalls = self.viableNumbers.redBalls ? 
-          (Array.isArray(self.viableNumbers.redBalls) ? self.viableNumbers.redBalls : []) : [];
-        // If viableNumbers has data, return it
-        if (whiteBalls.length > 0 || redBalls.length > 0) {
-          return {
-            whiteBalls: whiteBalls,
-            redBalls: redBalls
-          };
-        }
-      }
-      
-      // Also check the Mongoose document directly (in case toObject() doesn't include it)
-      if (this.viableNumbers && typeof this.viableNumbers === 'object') {
-        const whiteBalls = this.viableNumbers.whiteBalls ? 
-          (Array.isArray(this.viableNumbers.whiteBalls) ? Array.from(this.viableNumbers.whiteBalls) : []) : [];
-        const redBalls = this.viableNumbers.redBalls ? 
-          (Array.isArray(this.viableNumbers.redBalls) ? Array.from(this.viableNumbers.redBalls) : []) : [];
-        if (whiteBalls.length > 0 || redBalls.length > 0) {
-          return {
-            whiteBalls: whiteBalls,
-            redBalls: redBalls
-          };
-        }
-      }
-      
       // Legacy support: if viableNumbers doesn't exist or is empty, check nonViableNumbers
       // Treat nonViableNumbers as viableNumbers for backward compatibility
+      // AND for the requested feature: Show the non-viable numbers directly
       if ((self.nonViableNumbers && typeof self.nonViableNumbers === 'object') ||
-          (this.nonViableNumbers && typeof this.nonViableNumbers === 'object')) {
+        (this.nonViableNumbers && typeof this.nonViableNumbers === 'object')) {
         const nonViable = self.nonViableNumbers || this.nonViableNumbers;
-        const whiteBalls = nonViable.whiteBalls ? 
-          (Array.isArray(nonViable.whiteBalls) ? 
+        const whiteBalls = nonViable.whiteBalls ?
+          (Array.isArray(nonViable.whiteBalls) ?
             (nonViable.whiteBalls.length ? Array.from(nonViable.whiteBalls) : []) : []) : [];
-        const redBalls = nonViable.redBalls ? 
-          (Array.isArray(nonViable.redBalls) ? 
+        const redBalls = nonViable.redBalls ?
+          (Array.isArray(nonViable.redBalls) ?
             (nonViable.redBalls.length ? Array.from(nonViable.redBalls) : []) : []) : [];
-        // Return nonViableNumbers as viableNumbers (backward compat - old predictions stored as nonViable)
+
+        // Return nonViableNumbers directly
         if (whiteBalls.length > 0 || redBalls.length > 0) {
           return {
             whiteBalls: whiteBalls,
@@ -166,44 +143,62 @@ predictionSchema.methods.getViableNumbers = function() {
           };
         }
       }
-      
-      // Return empty structure if nothing found
+
+      // If explicit viableNumbers exist (and we didn't use nonViable above), use them
+      if (self.viableNumbers && typeof self.viableNumbers === 'object') {
+        const whiteBalls = self.viableNumbers.whiteBalls ?
+          (Array.isArray(self.viableNumbers.whiteBalls) ? self.viableNumbers.whiteBalls : []) : [];
+        const redBalls = self.viableNumbers.redBalls ?
+          (Array.isArray(self.viableNumbers.redBalls) ? self.viableNumbers.redBalls : []) : [];
+        if (whiteBalls.length > 0 || redBalls.length > 0) {
+          return {
+            whiteBalls: whiteBalls,
+            redBalls: redBalls
+          };
+        }
+      }
+
       return {
         whiteBalls: [],
         redBalls: []
       };
+
     case 'gopher5':
-      const viableSingle = self.viableNumbersSingle || this.viableNumbersSingle;
-      if (viableSingle && Array.isArray(viableSingle) && viableSingle.length > 0) {
-        return Array.from(viableSingle);
-      }
-      // Legacy support
+      // Legacy support - Check non-viable first and return it directly
       const nonViableSingle = self.nonViableNumbersSingle || this.nonViableNumbersSingle;
       if (nonViableSingle && Array.isArray(nonViableSingle) && nonViableSingle.length > 0) {
         return Array.from(nonViableSingle);
       }
-      return [];
-    case 'pick3':
-      const viablePick3 = self.viableNumbersPick3 || this.viableNumbersPick3;
-      if (viablePick3 && Array.isArray(viablePick3) && viablePick3.length > 0) {
-        return Array.from(viablePick3);
+
+      const viableSingle = self.viableNumbersSingle || this.viableNumbersSingle;
+      if (viableSingle && Array.isArray(viableSingle) && viableSingle.length > 0) {
+        return Array.from(viableSingle);
       }
-      // Legacy support
+      return [];
+
+    case 'pick3':
+      // Legacy support - Check non-viable first and return it directly
       const nonViablePick3 = self.nonViableNumbersPick3 || this.nonViableNumbersPick3;
       if (nonViablePick3 && Array.isArray(nonViablePick3) && nonViablePick3.length > 0) {
         return Array.from(nonViablePick3);
       }
+
+      const viablePick3 = self.viableNumbersPick3 || this.viableNumbersPick3;
+      if (viablePick3 && Array.isArray(viablePick3) && viablePick3.length > 0) {
+        return Array.from(viablePick3);
+      }
       return [];
+
     default:
       return [];
   }
 };
 
 // Legacy method - kept for backward compatibility
-predictionSchema.methods.getNonViableNumbers = function() {
+predictionSchema.methods.getNonViableNumbers = function () {
   // If we have viable numbers, calculate non-viable as the inverse
   const viable = this.getViableNumbers();
-  
+
   switch (this.lotteryType) {
     case 'powerball':
     case 'megamillion':
