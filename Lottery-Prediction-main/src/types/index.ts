@@ -17,6 +17,7 @@ export interface User {
   transactionCount: number;
   role: 'user' | 'admin';
   notificationsEnabled: boolean;
+  isPhoneVerified: boolean;
   isActive?: boolean; // User active/inactive status
   createdAt?: string; // Account creation date
 }
@@ -248,7 +249,7 @@ export interface AuthContextType {
   loading: boolean;
   login: (credentials: LoginForm) => Promise<{ user: User; token: string }>;
   register: (userData: RegisterForm) => Promise<void>;
-  logout: () => void;
+  logout: (silent?: boolean) => void;
   updateProfile: (data: ProfileUpdateForm) => Promise<void>;
   changePassword: (data: PasswordChangeForm) => Promise<void>;
   refreshUser: () => Promise<void>;

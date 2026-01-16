@@ -7,7 +7,7 @@ import {
   getTrialPredictions,
   getPredictionResult
 } from '../controllers/predictionController.js';
-import { protect } from '../middleware/auth.js';
+import { protect, isVerified } from '../middleware/auth.js';
 import {
   validateLotteryType,
   validatePredictionId,
@@ -35,22 +35,22 @@ router.use((req, res, next) => {
 // @route   GET /api/predictions/my-purchases
 // @desc    Get user's purchased predictions
 // @access  Private
-router.get('/my-purchases', protect, validatePagination, getMyPurchases);
+router.get('/my-purchases', protect, isVerified, validatePagination, getMyPurchases);
 
 // @route   GET /api/predictions/result/:id
 // @desc    Get result for a purchased prediction
 // @access  Private (user must have purchased)
-router.get('/result/:id', protect, validatePredictionId, getPredictionResult);
+router.get('/result/:id', protect, isVerified, validatePredictionId, getPredictionResult);
 
 // @route   GET /api/predictions/trial/:lotteryType
 // @desc    Get trial predictions for user's selected lottery
 // @access  Private
-router.get('/trial/:lotteryType', protect, validateLotteryType, getTrialPredictions);
+router.get('/trial/:lotteryType', protect, isVerified, validateLotteryType, getTrialPredictions);
 
 // @route   GET /api/predictions/:lotteryType/:id
 // @desc    Get specific prediction details
 // @access  Private
-router.get('/:lotteryType/:id', protect, validateLotteryType, validatePredictionId, (req, res, next) => {
+router.get('/:lotteryType/:id', protect, isVerified, validateLotteryType, validatePredictionId, (req, res, next) => {
   console.log('🚀🚀🚀 ROUTE HIT: /api/predictions/:lotteryType/:id');
   console.log('🚀 Params:', req.params);
   console.log('🚀 User:', req.user);
@@ -65,7 +65,7 @@ router.get('/:lotteryType', validateLotteryType, validatePagination, getPredicti
 // @route   POST /api/predictions/:lotteryType/:id/purchase
 // @desc    Purchase a prediction
 // @access  Private
-router.post('/:lotteryType/:id/purchase', protect, validateLotteryType, validatePredictionId, validatePurchase, purchasePrediction);
+router.post('/:lotteryType/:id/purchase', protect, isVerified, validateLotteryType, validatePredictionId, validatePurchase, purchasePrediction);
 
 export default router;
 

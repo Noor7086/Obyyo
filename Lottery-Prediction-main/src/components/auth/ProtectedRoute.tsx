@@ -28,6 +28,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Users with a database record are considered verified in the current flow.
+  // Registration happens in a stateless way and only creates a record AFTER OTP verification.
+  // So if we have a user object here, they are either a full user or an admin.
   return <>{children}</>;
 };
 

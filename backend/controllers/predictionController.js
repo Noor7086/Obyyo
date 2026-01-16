@@ -1,6 +1,7 @@
 import Prediction from '../models/Prediction.js';
 import Purchase from '../models/Purchase.js';
 import User from '../models/User.js';
+import Wallet from '../models/Wallet.js';
 import { validationResult } from 'express-validator';
 
 // Helper function to calculate viable numbers from non-viable numbers
@@ -99,14 +100,15 @@ const getPredictions = async (req, res) => {
 // @access  Private (requires purchase OR trial)
 const getPredictionDetails = async (req, res) => {
   try {
-    console.log('🚀 getPredictionDetails called:', {
-      lotteryType: req.params.lotteryType,
-      id: req.params.id,
-      userId: req.user.userId
-    });
-
     const { lotteryType, id } = req.params;
     const userId = req.user.userId;
+
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Please verify your phone number first.'
+      });
+    }
 
     const prediction = await Prediction.findById(id);
     if (!prediction) {
@@ -483,6 +485,13 @@ const purchasePrediction = async (req, res) => {
     const { paymentMethod } = req.body;
     const userId = req.user.userId;
 
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Please verify your phone number first.'
+      });
+    }
+
     const prediction = await Prediction.findById(id);
     if (!prediction) {
       return res.status(404).json({
@@ -530,21 +539,32 @@ const purchasePrediction = async (req, res) => {
 
     // Handle wallet payment
     if (paymentMethod === 'wallet') {
-      if (user.walletBalance < prediction.price) {
+      const wallet = await Wallet.findOne({ user: req.user.userId });
+      if (!wallet || wallet.balance < prediction.price) {
         return res.status(400).json({
           success: false,
           message: 'Insufficient wallet balance'
         });
       }
 
-      // Deduct from wallet
-      user.walletBalance -= prediction.price;
-      await user.save();
+      // Deduct from wallet and add transaction
+      await wallet.updateBalance(prediction.price, 'debit');
+      await wallet.addTransaction({
+        type: 'payment',
+        amount: prediction.price,
+        description: `Purchase: ${prediction.lotteryDisplayName || prediction.lotteryType}`,
+        reference: `PRED_${prediction._id}`,
+        status: 'completed',
+        metadata: {
+          predictionId: id,
+          lotteryType: prediction.lotteryType
+        }
+      });
 
       // Generate unique transaction ID
       const transactionId = `WALLET_${Date.now()}_${userId}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Create purchase record with all transaction details
+      // Create purchase record
       const purchase = await Purchase.create({
         user: userId,
         prediction: id,
@@ -556,8 +576,8 @@ const purchasePrediction = async (req, res) => {
         userAgent: req.headers['user-agent'],
         paymentGatewayResponse: {
           method: 'wallet',
-          walletBalanceBefore: user.walletBalance + prediction.price,
-          walletBalanceAfter: user.walletBalance,
+          walletBalanceBefore: wallet.balance + prediction.price,
+          walletBalanceAfter: wallet.balance,
           timestamp: new Date()
         }
       });
@@ -609,6 +629,13 @@ const getMyPurchases = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { page = 1, limit = 10 } = req.query;
+
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Purchases not available until phone number is verified'
+      });
+    }
 
     const purchases = await Purchase.find({
       user: userId,
@@ -739,6 +766,13 @@ const getTrialPredictions = async (req, res) => {
     const { lotteryType } = req.params;
     const userId = req.user.userId;
 
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Trial predictions not available until phone number is verified'
+      });
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -798,6 +832,13 @@ const getPredictionResult = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
+
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Results not available until phone number is verified'
+      });
+    }
 
     // Check if user has purchased this prediction
     const purchase = await Purchase.findOne({

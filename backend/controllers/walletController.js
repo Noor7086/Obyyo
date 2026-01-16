@@ -7,11 +7,26 @@ import { validationResult } from 'express-validator';
 // @access  Private
 const getWallet = async (req, res) => {
   try {
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Wallet not available until phone number is verified'
+      });
+    }
+
     const wallet = await Wallet.findOne({ user: req.user.userId })
       .populate('user', 'firstName lastName email')
       .sort({ 'transactions.createdAt': -1 });
 
     if (!wallet) {
+      // Ensure we have a valid user ID (non-pending user)
+      if (req.user.isPending || !req.user.userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Wallet cannot be created for unverified users'
+        });
+      }
+
       // Create wallet if it doesn't exist
       const newWallet = await Wallet.createForUser(req.user.userId);
       return res.json({
@@ -132,6 +147,9 @@ const depositFunds = async (req, res) => {
     // Update balance
     await wallet.updateBalance(amount, 'credit');
 
+    // Sync with User model for redundancy/legacy support
+    await User.findByIdAndUpdate(req.user.userId, { walletBalance: wallet.balance });
+
     // Refresh wallet data
     const updatedWallet = await Wallet.findById(wallet._id);
 
@@ -198,6 +216,9 @@ const withdrawFunds = async (req, res) => {
 
     // Update balance
     await wallet.updateBalance(amount, 'withdrawal');
+
+    // Sync with User model for redundancy/legacy support
+    await User.findByIdAndUpdate(req.user.userId, { walletBalance: wallet.balance });
 
     // Refresh wallet data
     const updatedWallet = await Wallet.findById(wallet._id);
@@ -273,6 +294,9 @@ const makePayment = async (req, res) => {
     // Update balance
     await wallet.updateBalance(amount, 'debit');
 
+    // Sync with User model for redundancy/legacy support
+    await User.findByIdAndUpdate(req.user.userId, { walletBalance: wallet.balance });
+
     // Refresh wallet data
     const updatedWallet = await Wallet.findById(wallet._id);
 
@@ -340,6 +364,9 @@ const addBonus = async (req, res) => {
     // Update balance
     await wallet.updateBalance(amount, 'bonus');
 
+    // Sync with User model for redundancy/legacy support
+    await User.findByIdAndUpdate(req.user.userId, { walletBalance: wallet.balance });
+
     // Refresh wallet data
     const updatedWallet = await Wallet.findById(wallet._id);
 
@@ -362,6 +389,13 @@ const addBonus = async (req, res) => {
 // @access  Private
 const getWalletStats = async (req, res) => {
   try {
+    if (req.user.isPending) {
+      return res.status(403).json({
+        success: false,
+        message: 'Wallet stats not available until phone number is verified'
+      });
+    }
+
     const wallet = await Wallet.findOne({ user: req.user.userId });
     if (!wallet) {
       return res.status(404).json({

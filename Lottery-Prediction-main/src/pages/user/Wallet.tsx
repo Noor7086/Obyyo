@@ -338,18 +338,6 @@ const Wallet: React.FC = () => {
                   <FaHistory className="me-2" />
                   Transaction History
                 </h5>
-                {walletStats && !loadingWalletStats && (
-                  <div className="d-flex gap-4 mt-2">
-                    <small className="text-muted">
-                      <FaArrowUp className="text-success me-1" />
-                      Added (30 days): <strong className="text-success">${(walletStats.deposits?.last30Days ?? 0).toFixed(2)}</strong>
-                    </small>
-                    <small className="text-muted">
-                      <FaArrowDown className="text-danger me-1" />
-                      Spent (30 days): <strong className="text-danger">${(walletStats.spending?.last30Days ?? 0).toFixed(2)}</strong>
-                    </small>
-                  </div>
-                )}
               </div>
               <Button
                 variant="outline-primary"

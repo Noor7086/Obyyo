@@ -63,14 +63,14 @@ const Login: React.FC = () => {
               <div className="card-body p-5">
                 <div className="text-center mb-4">
                   <Link to="/" className="navbar-brand d-inline-block mb-3">
-                    <img 
-                      src={logo} 
-                      alt="Obyyo Logo" 
-                      style={{ 
-                        height: '60px', 
+                    <img
+                      src={logo}
+                      alt="Obyyo Logo"
+                      style={{
+                        height: '60px',
                         width: 'auto',
                         objectFit: 'contain'
-                      }} 
+                      }}
                     />
                   </Link>
                   <h2 className="mt-3 mb-2">Welcome Back</h2>

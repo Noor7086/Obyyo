@@ -1,12 +1,18 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Wallet from '../models/Wallet.js';
 import { validationResult } from 'express-validator';
 import { sendWelcomeEmail, sendForgotPasswordEmail } from '../utils/emailService.js';
 import { sendOTP } from '../utils/twilioService.js';
+import bcrypt from 'bcryptjs';
 
 // Generate JWT Token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+const generateToken = (userId, isPending = false, pendingData = null) => {
+  const payload = { userId, isPending };
+  if (isPending && pendingData) {
+    payload.pendingData = pendingData;
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
@@ -27,7 +33,7 @@ const register = async (req, res) => {
 
     const { firstName, lastName, email, password, phone, country, selectedLottery } = req.body;
 
-    // Check if user already exists
+    // Check if user already exists in User collection
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -36,64 +42,47 @@ const register = async (req, res) => {
       });
     }
 
-    // Create user
-    const user = await User.create({
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    // Hash password and OTP before putting in JWT
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    const pendingData = {
       firstName,
       lastName,
       email,
-      password,
+      password: hashedPassword,
       phone,
       country,
-      country,
-      selectedLottery
-    });
+      selectedLottery,
+      phoneOtp: hashedOtp,
+      phoneOtpExpires: otpExpires
+    };
 
-    // Generate and send OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date();
-    otpExpires.setMinutes(otpExpires.getMinutes() + 10); // 10 mins expiry
-
-    user.phoneOtp = otp;
-    user.phoneOtpExpires = otpExpires;
-    user.isPhoneVerified = false;
-    await user.save();
-
+    // Send OTP
     try {
-      await sendOTP(user.phone, otp);
+      await sendOTP(phone, otp);
     } catch (otpError) {
       console.error('Failed to send OTP:', otpError);
     }
 
-    // Send welcome email (non-blocking - don't fail registration if email fails)
-    try {
-      const emailResult = await sendWelcomeEmail(user);
-      if (!emailResult || !emailResult.success) {
-        console.warn('Welcome email not sent (SMTP not configured or failed):', emailResult?.message);
-      }
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
-      // Continue with registration even if email fails
-    }
-
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate token with all user data
+    const token = generateToken(null, true, pendingData);
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'OTP sent to your phone. Please verify to complete registration.',
       data: {
         user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          country: user.country,
-          selectedLottery: user.selectedLottery,
-          trialStartDate: user.trialStartDate,
-          trialEndDate: user.trialEndDate,
-          isInTrial: user.isInTrial(),
-          createdAt: user.createdAt
+          firstName,
+          lastName,
+          email,
+          phone,
+          isPhoneVerified: false
         },
         token
       }
@@ -156,6 +145,10 @@ const login = async (req, res) => {
     // Generate token
     const token = generateToken(user._id);
 
+    // Get wallet balance
+    const wallet = await Wallet.findOne({ user: user._id });
+    const walletBalance = wallet ? wallet.balance : 0;
+
     res.json({
       success: true,
       message: 'Login successful',
@@ -171,7 +164,8 @@ const login = async (req, res) => {
           trialStartDate: user.trialStartDate,
           trialEndDate: user.trialEndDate,
           isInTrial: user.isInTrial(),
-          walletBalance: user.walletBalance,
+          walletBalance: walletBalance,
+          isPhoneVerified: user.isPhoneVerified,
           role: user.role,
           createdAt: user.createdAt
         },
@@ -192,6 +186,25 @@ const login = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
+    if (req.user.isPending) {
+      const data = req.user.pendingData;
+      return res.json({
+        success: true,
+        data: {
+          user: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            phone: data.phone,
+            country: data.country,
+            selectedLottery: data.selectedLottery,
+            isPhoneVerified: false,
+            role: 'user'
+          }
+        }
+      });
+    }
+
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({
@@ -199,6 +212,10 @@ const getMe = async (req, res) => {
         message: 'User not found'
       });
     }
+
+    // Get wallet balance
+    const wallet = await Wallet.findOne({ user: user._id });
+    const walletBalance = wallet ? wallet.balance : 0;
 
     res.json({
       success: true,
@@ -214,9 +231,7 @@ const getMe = async (req, res) => {
           trialStartDate: user.trialStartDate,
           trialEndDate: user.trialEndDate,
           isInTrial: user.isInTrial(),
-          walletBalance: user.walletBalance,
-          role: user.role,
-          notificationsEnabled: user.notificationsEnabled,
+          walletBalance: walletBalance,
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
           isPhoneVerified: user.isPhoneVerified,
@@ -314,8 +329,11 @@ const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.userId;
 
+    console.log(`🔐 Password change requested for user: ${userId}`);
+
     const user = await User.findById(userId).select('+password');
     if (!user) {
+      console.warn(`❌ User not found for password change: ${userId}`);
       return res.status(404).json({
         success: false,
         message: 'User not found'
@@ -323,8 +341,10 @@ const changePassword = async (req, res) => {
     }
 
     // Verify current password
+    console.log('🔄 Verifying current password...');
     const isCurrentPasswordValid = await user.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
+      console.warn(`❌ Current password incorrect for user: ${user.email}`);
       return res.status(400).json({
         success: false,
         message: 'Current password is incorrect'
@@ -332,15 +352,17 @@ const changePassword = async (req, res) => {
     }
 
     // Update password
+    console.log('🔄 Updating password in database...');
     user.password = newPassword;
     await user.save();
 
+    console.log(`✅ Password updated successfully for user: ${user.email}`);
     res.json({
       success: true,
       message: 'Password changed successfully'
     });
   } catch (error) {
-    console.error('Change password error:', error);
+    console.error('❌ Change password error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error during password change'
@@ -610,6 +632,7 @@ const verifyOTP = async (req, res) => {
   try {
     const { otp } = req.body;
     const userId = req.user.userId;
+    const isPending = req.user.isPending;
 
     if (!otp) {
       return res.status(400).json({
@@ -618,6 +641,74 @@ const verifyOTP = async (req, res) => {
       });
     }
 
+    if (isPending) {
+      const pendingData = req.user.pendingData;
+      if (!pendingData) {
+        return res.status(404).json({
+          success: false,
+          message: 'Registration session not found or expired'
+        });
+      }
+
+      // Verify OTP hash
+      const isOtpValid = await bcrypt.compare(otp, pendingData.phoneOtp);
+      if (!isOtpValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid OTP'
+        });
+      }
+
+      if (new Date() > new Date(pendingData.phoneOtpExpires)) {
+        return res.status(400).json({
+          success: false,
+          message: 'OTP has expired'
+        });
+      }
+
+      // OTP is valid, create the real user
+      const user = await User.create({
+        firstName: pendingData.firstName,
+        lastName: pendingData.lastName,
+        email: pendingData.email,
+        password: pendingData.password, // Already hashed in register
+        phone: pendingData.phone,
+        country: pendingData.country,
+        selectedLottery: pendingData.selectedLottery,
+        isPhoneVerified: true
+      });
+
+      // Initialize wallet for the new user
+      await Wallet.create({ user: user._id });
+
+      // Send welcome email
+      try {
+        await sendWelcomeEmail(user);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
+
+      // Generate final token
+      const token = generateToken(user._id);
+
+      return res.json({
+        success: true,
+        message: 'Phone number verified and registration complete',
+        data: {
+          user: {
+            id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            isPhoneVerified: true
+          },
+          token
+        }
+      });
+    }
+
+    // Handle existing user verification (if any routes still allow this)
     const user = await User.findById(userId).select('+phoneOtp +phoneOtpExpires');
     if (!user) {
       return res.status(404).json({
@@ -671,9 +762,47 @@ const verifyOTP = async (req, res) => {
 // @access  Private
 const resendOTP = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const user = await User.findById(userId);
+    const isPending = req.user.isPending;
 
+    if (isPending) {
+      const pendingData = req.user.pendingData;
+      if (!pendingData) {
+        return res.status(404).json({
+          success: false,
+          message: 'Registration session not found or expired'
+        });
+      }
+
+      // Generate new OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpires = new Date();
+      otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+      // Hash new OTP
+      const salt = await bcrypt.genSalt(12);
+      const hashedOtp = await bcrypt.hash(otp, salt);
+
+      // Update pendingData with new OTP
+      pendingData.phoneOtp = hashedOtp;
+      pendingData.phoneOtpExpires = otpExpires;
+
+      // Send OTP
+      await sendOTP(pendingData.phone, otp);
+
+      // Generate new token with updated data
+      const token = generateToken(null, true, pendingData);
+
+      return res.json({
+        success: true,
+        message: 'New OTP sent successfully',
+        data: {
+          token
+        }
+      });
+    }
+
+    // For verified users (if applicable)
+    const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -688,7 +817,6 @@ const resendOTP = async (req, res) => {
       });
     }
 
-    // Generate new OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date();
     otpExpires.setMinutes(otpExpires.getMinutes() + 10);
@@ -697,7 +825,6 @@ const resendOTP = async (req, res) => {
     user.phoneOtpExpires = otpExpires;
     await user.save();
 
-    // Send OTP
     await sendOTP(user.phone, otp);
 
     res.json({

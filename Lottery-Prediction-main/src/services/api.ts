@@ -85,11 +85,12 @@ class ApiService {
               // The component will show the actual error message from the backend
               break;
             case 400:
-              // Bad request - don't show toast for admin predictions endpoint (validation errors)
-              // Let the component handle field-specific error display
+              // Bad request - don't show toast for specific endpoints (validation/credential errors)
+              // Let the component handle specific error display (e.g. password change modal)
               const url400 = error.config?.url || '';
-              if (!url400.includes('/admin/predictions')) {
-                // For other endpoints, let components handle it or show toast if needed
+              if (!url400.includes('/admin/predictions') && !url400.includes('/auth/change-password')) {
+                // For other endpoints, show toast with message if available
+                toast.error(data.message || 'Invalid request parameters');
               }
               break;
             case 404:
@@ -252,6 +253,19 @@ class ApiService {
     });
 
     return response.data;
+  }
+
+  // Contact methods
+  async submitContact(data: any): Promise<any> {
+    return this.post('/contacts', data);
+  }
+
+  async getContacts(): Promise<any> {
+    return this.get('/contacts');
+  }
+
+  async deleteContact(id: string): Promise<any> {
+    return this.delete(`/contacts/${id}`);
   }
 
   // Health check

@@ -18,7 +18,7 @@ const Navbar: React.FC = () => {
   // Check if we're on the homepage
   const isHomePage = location.pathname === '/';
 
-  // Show logged-in state based on user
+  // Show logged-in state based on user presence
   const showLoggedInState = !!user;
 
   // Close dropdowns when clicking outside

@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { walletService, Wallet, WalletStats, Transaction, DepositRequest, WithdrawRequest, PaymentRequest, BonusRequest } from '../services/walletService';
 import toast from 'react-hot-toast';
+import { useAuth } from './AuthContext';
+
 
 interface WalletContextType {
   wallet: Wallet | null;
@@ -8,7 +10,7 @@ interface WalletContextType {
   transactions: Transaction[];
   loading: boolean;
   error: string | null;
-  
+
   // Actions
   fetchWallet: () => Promise<void>;
   fetchWalletStats: () => Promise<void>;
@@ -17,13 +19,13 @@ interface WalletContextType {
   withdrawFunds: (data: WithdrawRequest) => Promise<boolean>;
   makePayment: (data: PaymentRequest) => Promise<boolean>;
   addBonus: (data: BonusRequest) => Promise<boolean>;
-  
+
   // Utility functions
   formatCurrency: (amount: number) => string;
   formatTransactionType: (type: string) => string;
   getTransactionIcon: (type: string) => string;
   getTransactionColorClass: (type: string) => string;
-  
+
   // State management
   refreshWallet: () => Promise<void>;
   clearError: () => void;
@@ -35,7 +37,8 @@ interface WalletProviderProps {
   children: ReactNode;
 }
 
-export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
+export function WalletProvider({ children }: WalletProviderProps) {
+  const { user } = useAuth();
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [walletStats, setWalletStats] = useState<WalletStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -95,13 +98,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const updatedWallet = await walletService.depositFunds(data);
       setWallet(updatedWallet);
       toast.success('Funds deposited successfully!');
-      
+
       // Refresh stats and transactions
       await Promise.all([
         fetchWalletStats(),
         fetchTransactions()
       ]);
-      
+
       return true;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to deposit funds';
@@ -121,13 +124,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const updatedWallet = await walletService.withdrawFunds(data);
       setWallet(updatedWallet);
       toast.success('Withdrawal request submitted successfully!');
-      
+
       // Refresh stats and transactions
       await Promise.all([
         fetchWalletStats(),
         fetchTransactions()
       ]);
-      
+
       return true;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to withdraw funds';
@@ -147,13 +150,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const updatedWallet = await walletService.makePayment(data);
       setWallet(updatedWallet);
       toast.success('Payment completed successfully!');
-      
+
       // Refresh stats and transactions
       await Promise.all([
         fetchWalletStats(),
         fetchTransactions()
       ]);
-      
+
       return true;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to process payment';
@@ -173,13 +176,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const updatedWallet = await walletService.addBonus(data);
       setWallet(updatedWallet);
       toast.success('Bonus added successfully!');
-      
+
       // Refresh stats and transactions
       await Promise.all([
         fetchWalletStats(),
         fetchTransactions()
       ]);
-      
+
       return true;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to add bonus';
@@ -193,6 +196,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   // Refresh all wallet data
   const refreshWallet = async () => {
+    if (!user) {
+      return;
+    }
+
     await Promise.all([
       fetchWallet(),
       fetchWalletStats(),
@@ -225,10 +232,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   // Initial data fetch
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && user) {
       refreshWallet();
     }
-  }, []);
+  }, [user]);
+
 
   const value: WalletContextType = {
     wallet,
@@ -256,7 +264,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       {children}
     </WalletContext.Provider>
   );
-};
+}
 
 // Custom hook to use wallet context
 export const useWallet = (): WalletContextType => {
@@ -266,9 +274,6 @@ export const useWallet = (): WalletContextType => {
   }
   return context;
 };
-
-
-
 
 
 

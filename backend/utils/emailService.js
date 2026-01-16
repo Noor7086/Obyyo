@@ -47,7 +47,7 @@ const getLogoHtml = () => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   // Logo is in public folder, accessible at root or assets
   const logoUrl = process.env.LOGO_URL || `${frontendUrl}/logo.png`;
-  
+
   if (logoUrl) {
     // Return centered logo image with proper styling for email clients
     // The logo will be displayed instead of the text "Obyyo Lottery Prediction"
@@ -67,6 +67,7 @@ const sendEmail = async ({ to, subject, templateName, data = {} }) => {
       return { success: false, message: 'Email service not configured' };
     }
 
+    /* Commented out SMTP work as requested
     const transporter = createTransporter();
     
     // Load and process template
@@ -86,8 +87,13 @@ const sendEmail = async ({ to, subject, templateName, data = {} }) => {
     
     console.log('Email sent successfully:', info.messageId);
     return { success: true, messageId: info.messageId };
+    */
+
+    console.log('📧 SMTP Work Commented Out - Email would be sent to:', to);
+    console.log('Subject:', subject);
+    return { success: true, message: 'SMTP Disabled' };
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error in sendEmail (commented):', error);
     return { success: false, error: error.message };
   }
 };
@@ -96,7 +102,7 @@ const sendEmail = async ({ to, subject, templateName, data = {} }) => {
 const sendWelcomeEmail = async (user) => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const loginUrl = `${frontendUrl}/login`;
-  
+
   // Format dates
   const formatDate = (date) => {
     if (!date) return 'N/A';

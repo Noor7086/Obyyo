@@ -13,7 +13,7 @@ interface AdminLayoutProps {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   // Initialize with cached stats from sessionStorage to prevent flash of 0
   const getCachedStats = (): { totalUsers?: number; totalPredictions?: number } => {
     try {
@@ -79,9 +79,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats })
     const handleToggleSidebar = () => {
       setSidebarOpen(prev => !prev);
     };
-    
+
     window.addEventListener('toggleSidebar', handleToggleSidebar);
-    
+
     return () => {
       window.removeEventListener('toggleSidebar', handleToggleSidebar);
     };
@@ -113,26 +113,26 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats })
   // Only use propStats as initial fallback if layoutStats is not yet loaded
   // This ensures consistent numbers across all pages
   const displayStats = {
-    totalUsers: layoutStats.totalUsers !== undefined 
-      ? layoutStats.totalUsers 
+    totalUsers: layoutStats.totalUsers !== undefined
+      ? layoutStats.totalUsers
       : (propStats?.totalUsers ?? 0),
-    totalPredictions: layoutStats.totalPredictions !== undefined 
-      ? layoutStats.totalPredictions 
+    totalPredictions: layoutStats.totalPredictions !== undefined
+      ? layoutStats.totalPredictions
       : (propStats?.totalPredictions ?? 0)
   };
 
   return (
     <div className="admin-dashboard">
       <AdminNavbar />
-      
+
       <div className="dashboard-container">
         {/* Sidebar */}
         <div className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="sidebar-header">
-            <Link 
+            <Link
               to="/admin"
               className="d-flex align-items-center justify-content-start fw-bold text-dark"
-              style={{ 
+              style={{
                 textDecoration: 'none',
                 fontSize: '1.25rem',
                 paddingLeft: '1.5rem'
@@ -140,7 +140,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats })
             >
               <span>Admin Panel</span>
             </Link>
-            <button 
+            <button
               className="sidebar-toggle d-admin-desktop-toggle ms-auto"
               onClick={() => setSidebarOpen(!sidebarOpen)}
               aria-label="Close sidebar"
@@ -148,7 +148,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats })
               <i className="bi bi-x-lg"></i>
             </button>
           </div>
-          
+
           <nav className="sidebar-nav">
             <a href="/admin" className={`nav-item ${isActive('/admin') ? 'active' : ''}`}>
               <i className="bi bi-speedometer2"></i>
@@ -168,6 +168,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats })
               <i className="bi bi-credit-card"></i>
               <span>Recent Payments</span>
             </a>
+            <a href="/admin/contacts" className={`nav-item ${isActive('/admin/contacts') ? 'active' : ''}`}>
+              <i className="bi bi-chat-dots-fill"></i>
+              <span>Messages</span>
+            </a>
           </nav>
         </div>
 
@@ -179,7 +183,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, stats: propStats })
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
-        <div 
+        <div
           className="sidebar-overlay d-admin-desktop-toggle"
           onClick={() => setSidebarOpen(false)}
         ></div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ContactForm } from '../types';
 import toast from 'react-hot-toast';
+import { apiService } from '../services/api';
 
 const Contact: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,12 +17,15 @@ const Contact: React.FC = () => {
   const onSubmit = async (data: ContactForm) => {
     try {
       setIsSubmitting(true);
-      // TODO: Implement contact form submission
-      console.log('Contact form data:', data);
-      toast.success('Message sent successfully! We\'ll get back to you soon.');
-      reset();
-    } catch (error) {
-      toast.error('Failed to send message. Please try again.');
+      const response: any = await apiService.submitContact(data);
+      if (response.success) {
+        toast.success(response.message || 'Message sent successfully! We\'ll get back to you soon.');
+        reset();
+      } else {
+        toast.error(response.message || 'Failed to send message.');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send message. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

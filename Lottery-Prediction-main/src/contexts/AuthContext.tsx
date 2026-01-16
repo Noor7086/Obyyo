@@ -64,29 +64,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (silent = false) => {
     setUser(null);
     localStorage.removeItem('token');
-    toast.success('Logged out successfully');
+    if (!silent) {
+      toast.success('Logged out successfully');
+    }
   };
 
   const updateProfile = async (data: ProfileUpdateForm) => {
     try {
-      setLoading(true);
       const updatedUser = await authService.updateProfile(data);
       setUser(updatedUser);
       toast.success('Profile updated successfully!');
     } catch (error: any) {
       toast.error(error.message || 'Profile update failed');
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const changePassword = async (data: PasswordChangeForm) => {
     try {
-      setLoading(true);
       await authService.changePassword(data);
       // Don't show toast here, let the component handle success/error messages
     } catch (error: any) {
@@ -94,8 +92,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('AuthContext error message:', error.message);
       // Don't show toast here, let the component handle error messages
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

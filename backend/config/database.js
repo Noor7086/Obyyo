@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/obyyo-lottery');
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mahnoorazhar70:codingwithmahnoor@mahnoorcluster.tzuep24.mongodb.net/obyyo-lottery');
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {

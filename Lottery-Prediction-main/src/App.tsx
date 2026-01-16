@@ -1,6 +1,6 @@
+import { useEffect, useRef } from 'react'
 import { Routes, Route, useLocation, Link } from 'react-router-dom'
-import { useEffect } from 'react'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { PredictionProvider } from './contexts/PredictionContext'
 import { WalletProvider } from './contexts/WalletContext'
 import Navbar from './components/layout/Navbar'
@@ -25,6 +25,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminPredictions from './pages/admin/AdminPredictions'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminPayments from './pages/admin/AdminPayments'
+import AdminContacts from './pages/admin/AdminContacts'
 import Results from './pages/Results'
 import HowItWorks from './pages/HowItWorks'
 import Features from './pages/Features'
@@ -38,7 +39,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import AdminRoute from './components/auth/AdminRoute'
 import AdminRedirect from './components/auth/AdminRedirect'
 import PublicRoute from './components/auth/PublicRoute'
-import TawkTo from './components/TawkTo'
+// import TawkTo from './components/TawkTo'
 
 // Component to scroll to top on route change
 const ScrollToTop = () => {
@@ -56,8 +57,8 @@ const ConditionalNavbar = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  if (isAdminRoute) {
-    return null; // Admin pages render their own navbar
+  if (isAdminRoute || location.pathname === '/verify-otp') {
+    return null; // Admin pages and OTP verification page hide the navbar
   }
 
   return <Navbar />;
@@ -68,11 +69,38 @@ const ConditionalFooter = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  if (isAdminRoute) {
-    return null; // Admin pages don't need footer
+  if (isAdminRoute || location.pathname === '/verify-otp') {
+    return null; // Admin pages and OTP verification page don't need footer
   }
 
   return <Footer />;
+};
+// Component to handle session discard for unverified users
+const SessionManager = () => {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const prevPathRef = useRef(location.pathname);
+
+  useEffect(() => {
+    // If user is logged in but NOT verified (and not admin)
+    if (user && !user.isPhoneVerified && user.role !== 'admin') {
+      // If they were on /verify-otp and moved to any other page EXCEPT auth pages
+      const isCurrentlyOnOtpPage = location.pathname === '/verify-otp';
+      const wasOnOtpPage = prevPathRef.current === '/verify-otp';
+
+      const exitedAuthFlow =
+        wasOnOtpPage &&
+        !isCurrentlyOnOtpPage;
+
+      if (exitedAuthFlow) {
+        console.log('User left OTP flow - discarding session (was:', wasOnOtpPage, 'now:', isCurrentlyOnOtpPage, 'path:', location.pathname, ')');
+        logout(true); // Silent logout
+      }
+    }
+    prevPathRef.current = location.pathname;
+  }, [location.pathname, user, logout]);
+
+  return null;
 };
 
 function App() {
@@ -82,6 +110,7 @@ function App() {
         <PredictionProvider>
           <div className="App" style={{ margin: 0, padding: 0 }}>
             <ScrollToTop />
+            <SessionManager />
             {/* <TawkTo /> */}
             <ConditionalNavbar />
             <main style={{ margin: 0, padding: 0 }}>
@@ -236,6 +265,11 @@ function App() {
                     <AdminPayments />
                   </AdminRoute>
                 } />
+                <Route path="/admin/contacts" element={
+                  <AdminRoute>
+                    <AdminContacts />
+                  </AdminRoute>
+                } />
 
                 {/* 404 - Catch all unmatched routes */}
                 <Route path="*" element={
@@ -256,9 +290,9 @@ function App() {
           </div>
         </PredictionProvider>
       </WalletProvider>
+      {/* <TawkTo /> */}
     </AuthProvider>
   )
 }
 
 export default App
-

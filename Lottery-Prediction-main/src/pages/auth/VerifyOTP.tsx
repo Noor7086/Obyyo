@@ -4,14 +4,30 @@ import { apiService } from '../../services/api';
 import toast from 'react-hot-toast';
 import logo from '../../assets/logo.png';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 const VerifyOTP: React.FC = () => {
+    const { user, refreshUser } = useAuth();
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
+    const isVerifiedSuccess = React.useRef(false);
 
     const navigate = useNavigate();
+
+    // Guards
+    React.useEffect(() => {
+        if (!user) {
+            navigate('/register', { replace: true });
+            return;
+        }
+        if (user.isPhoneVerified) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
+    }, [user, navigate]);
 
     // Effect for resend timer
     React.useEffect(() => {
@@ -34,13 +50,13 @@ const VerifyOTP: React.FC = () => {
         try {
             const response = await apiService.post<any>('/auth/verify-otp', { otp });
             if (response.success) {
+                // Mark success to prevent session discard in cleanup
+                isVerifiedSuccess.current = true;
+
                 // Refresh user or navigate
-                // If the context doesn't auto-update, we might need to force a refresh if possible
-                // For now, redirect to dashboard
                 toast.success('You have registered successfully');
+                await refreshUser();
                 navigate('/dashboard', { replace: true });
-                // Optional: Trigger a window reload if necessary to update Auth Context IsPhoneVerified state immediately
-                // window.location.href = '/dashboard'; 
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Verification failed. Please try again.');
@@ -135,6 +151,12 @@ const VerifyOTP: React.FC = () => {
                                             {resendDisabled ? `Resend in ${resendTimer}s` : 'Resend Code'}
                                         </button>
                                     </p>
+                                </div>
+                                <div className="text-center mt-3">
+                                    <Link to="/register" className="text-muted text-decoration-none small">
+                                        <i className="bi bi-arrow-left me-1"></i>
+                                        Back to Register (Discard session)
+                                    </Link>
                                 </div>
                             </div>
                         </div>

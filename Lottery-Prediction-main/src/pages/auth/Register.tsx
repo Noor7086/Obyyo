@@ -20,7 +20,12 @@ const Register: React.FC = () => {
     watch,
     formState: { errors },
     setError
-  } = useForm<RegisterForm>();
+  } = useForm<RegisterForm>({
+    defaultValues: {
+      phone: '+1',
+      country: 'United States'
+    }
+  });
 
   const password = watch('password');
 

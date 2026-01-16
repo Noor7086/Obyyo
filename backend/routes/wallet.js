@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middleware/auth.js';
+import { protect, isVerified } from '../middleware/auth.js';
 import { body } from 'express-validator';
 import {
   getWallet,
@@ -94,6 +94,7 @@ const bonusValidation = [
 
 // All routes are protected
 router.use(protect);
+router.use(isVerified);
 
 // @route   GET /api/wallet
 // @desc    Get user's wallet
