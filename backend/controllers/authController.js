@@ -3,8 +3,25 @@ import User from '../models/User.js';
 import Wallet from '../models/Wallet.js';
 import { validationResult } from 'express-validator';
 import { sendWelcomeEmail, sendForgotPasswordEmail } from '../utils/emailService.js';
-import { sendOTP } from '../utils/twilioService.js';
+import { sendOTP, normalizePhoneNumber } from '../utils/twilioService.js';
 import bcrypt from 'bcryptjs';
+
+// Helper function to format date to ISO string
+const formatDate = (date) => {
+  if (!date) return null;
+  if (date instanceof Date) {
+    return date.toISOString();
+  }
+  if (typeof date === 'string') {
+    return date;
+  }
+  return new Date(date).toISOString();
+};
+
+// Helper function to get user creation date with fallback
+const getUserCreatedAt = (user) => {
+  return formatDate(user.createdAt) || formatDate(user.trialStartDate) || new Date().toISOString();
+};
 
 // Generate JWT Token
 const generateToken = (userId, isPending = false, pendingData = null) => {
@@ -32,6 +49,9 @@ const register = async (req, res) => {
     }
 
     const { firstName, lastName, email, password, phone, country, selectedLottery } = req.body;
+    
+    // Normalize phone number before storing
+    const normalizedPhone = normalizePhoneNumber(phone);
 
     // Check if user already exists in User collection
     const existingUser = await User.findOne({ email });
@@ -56,16 +76,16 @@ const register = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
-      phone,
+      phone: normalizedPhone,
       country,
       selectedLottery,
       phoneOtp: hashedOtp,
       phoneOtpExpires: otpExpires
     };
 
-    // Send OTP
+    // Send OTP (will be normalized again in sendOTP, but that's fine for consistency)
     try {
-      await sendOTP(phone, otp);
+      await sendOTP(normalizedPhone, otp);
     } catch (otpError) {
       console.error('Failed to send OTP:', otpError);
     }
@@ -81,7 +101,7 @@ const register = async (req, res) => {
           firstName,
           lastName,
           email,
-          phone,
+          phone: normalizedPhone,
           isPhoneVerified: false
         },
         token
@@ -167,7 +187,7 @@ const login = async (req, res) => {
           walletBalance: walletBalance,
           isPhoneVerified: user.isPhoneVerified,
           role: user.role,
-          createdAt: user.createdAt
+          createdAt: getUserCreatedAt(user)
         },
         token
       }
@@ -235,7 +255,7 @@ const getMe = async (req, res) => {
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
           isPhoneVerified: user.isPhoneVerified,
-          createdAt: user.createdAt
+          createdAt: getUserCreatedAt(user)
         }
       }
     });
@@ -267,7 +287,7 @@ const updateProfile = async (req, res) => {
     // Update fields
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
-    if (phone) user.phone = phone;
+    if (phone) user.phone = normalizePhoneNumber(phone);
     if (notificationsEnabled !== undefined) user.notificationsEnabled = notificationsEnabled;
 
     // Update email if provided and different from current
@@ -308,7 +328,7 @@ const updateProfile = async (req, res) => {
           walletBalance: user.walletBalance,
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
-          createdAt: user.createdAt
+          createdAt: getUserCreatedAt(user)
         }
       }
     });
@@ -701,7 +721,8 @@ const verifyOTP = async (req, res) => {
             lastName: user.lastName,
             email: user.email,
             phone: user.phone,
-            isPhoneVerified: true
+            isPhoneVerified: true,
+            createdAt: getUserCreatedAt(user)
           },
           token
         }

@@ -1,6 +1,14 @@
 import React from 'react';
+import { useSEO } from '../hooks/useSEO';
 
 const About: React.FC = () => {
+  useSEO({
+    title: 'About Us - Obyyo Lottery Prediction Platform',
+    description: 'Learn about Obyyo, your trusted partner in lottery prediction and winning strategy. We help players improve their winning odds through advanced analytics.',
+    keywords: 'about obyyo, lottery prediction service, lottery strategy, winning odds',
+    url: 'https://obyyo.com/about',
+    canonical: 'https://obyyo.com/about'
+  });
   return (
     <div className="container py-5 mt-5">
       <div className="row">

@@ -153,6 +153,8 @@ export interface RegisterForm {
   country: string;
   selectedLottery: LotteryType;
   agreeToTerms: boolean;
+  consentSMSVerification: boolean;
+  consentLotteryUpdates: boolean;
 }
 
 export interface ProfileUpdateForm {

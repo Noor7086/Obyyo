@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Container, Row, Col, Card, Form, Button, Alert, Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Form, Button, Alert, Badge, Modal } from 'react-bootstrap';
 import toast from 'react-hot-toast';
+import { apiService } from '../../services/api';
 
 const Profile: React.FC = () => {
-  const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile, changePassword, logout } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -384,6 +388,29 @@ const Profile: React.FC = () => {
     { value: 'powerball', label: 'Powerball' }
   ];
 
+  const handleDownloadPredictions = () => {
+    navigate('/my-predictions');
+  };
+
+  const handleHelpSupport = () => {
+    navigate('/contact');
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      await apiService.delete('/users/me');
+      toast.success('Account deleted successfully');
+      logout();
+      navigate('/');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete account. Please try again.');
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   return (
     <Container className="py-4" style={{ marginTop: '4rem' }}>
       <Row className="mb-4">
@@ -401,7 +428,7 @@ const Profile: React.FC = () => {
               <div>
                 <h5 className="mb-1">{user?.firstName} {user?.lastName}</h5>
                 <Badge bg={user?.isInTrial ? 'success' : 'primary'} className="small">
-                  {user?.isInTrial ? 'Trial User' : 'Premium User'}
+                  {user?.isInTrial ? 'Trial User' : 'Active User'}
                 </Badge>
               </div>
             </div>
@@ -727,22 +754,29 @@ const Profile: React.FC = () => {
                     {user?.isInTrial ? 'Trial' : 'Active'}
                   </Badge>
                   <span className="small text-muted">
-                    {user?.isInTrial ? 'Free trial active' : 'Premium subscription'}
+                    {user?.isInTrial ? 'Free trial active' : 'Active account'}
                   </span>
                 </div>
               </div>
               <div className="mb-3">
                 <small className="text-muted">Member Since</small>
                 <div className="fw-medium">
-                  {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }) : (user?.trialStartDate ? new Date(user.trialStartDate).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }) : 'N/A')}
+                  {(() => {
+                    const dateToUse = user?.createdAt || user?.trialStartDate;
+                    if (dateToUse) {
+                      try {
+                        return new Date(dateToUse).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        });
+                      } catch (e) {
+                        console.error('Error formatting date:', e);
+                        return 'N/A';
+                      }
+                    }
+                    return 'N/A';
+                  })()}
                 </div>
               </div>
               <div className="mb-3">
@@ -775,19 +809,27 @@ const Profile: React.FC = () => {
             </Card.Header>
             <Card.Body className="p-4">
               <div className="d-grid gap-2">
-                <Button variant="outline-primary" size="sm">
+                <Button 
+                  variant="outline-primary" 
+                  size="sm"
+                  onClick={handleDownloadPredictions}
+                >
                   <i className="bi bi-download me-2"></i>
                   Download Predictions
                 </Button>
-                <Button variant="outline-success" size="sm">
-                  <i className="bi bi-bell me-2"></i>
-                  Notification Settings
-                </Button>
-                <Button variant="outline-info" size="sm">
+                <Button 
+                  variant="outline-info" 
+                  size="sm"
+                  onClick={handleHelpSupport}
+                >
                   <i className="bi bi-question-circle me-2"></i>
                   Help & Support
                 </Button>
-                <Button variant="outline-danger" size="sm">
+                <Button 
+                  variant="outline-danger" 
+                  size="sm"
+                  onClick={() => setShowDeleteModal(true)}
+                >
                   <i className="bi bi-trash me-2"></i>
                   Delete Account
                 </Button>
@@ -796,6 +838,42 @@ const Profile: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="text-danger">
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            Delete Account
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-3">
+            Are you sure you want to delete your account? This action cannot be undone.
+          </p>
+          <Alert variant="warning" className="mb-0">
+            <strong>Warning:</strong> This will permanently delete:
+            <ul className="mb-0 mt-2">
+              <li>Your account and profile information</li>
+              <li>Your wallet and transaction history</li>
+              <li>All your purchased predictions</li>
+            </ul>
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={handleDeleteAccount}
+            disabled={loading}
+          >
+            {loading ? 'Deleting...' : 'Delete Account'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
     </Container>
   );
 };

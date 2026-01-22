@@ -22,7 +22,7 @@ const Register: React.FC = () => {
     setError
   } = useForm<RegisterForm>({
     defaultValues: {
-      phone: '+1',
+      phone: '',
       country: 'United States'
     }
   });
@@ -178,7 +178,7 @@ const Register: React.FC = () => {
 
                   <div className="mb-3">
                     <label htmlFor="phone" className="form-label">
-                      Phone Number
+                      Phone Number <span className="text-danger">*</span>
                     </label>
                     <input
                       type="tel"
@@ -186,12 +186,27 @@ const Register: React.FC = () => {
                       id="phone"
                       {...register('phone', {
                         required: 'Phone number is required',
-                        pattern: {
-                          value: /^\+?[\d\s\-\(\)]+$/,
-                          message: 'Invalid phone number'
+                        validate: {
+                          notJustCountryCode: (value) => {
+                            // Remove all non-digit characters to count digits
+                            const digitsOnly = value.replace(/\D/g, '');
+                            // Check if phone has at least 10 digits (minimum for a valid phone number)
+                            if (digitsOnly.length < 10) {
+                              return 'Phone number must contain at least 10 digits';
+                            }
+                            return true;
+                          },
+                          validFormat: (value) => {
+                            // Check if it matches a valid phone format
+                            const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
+                            if (!phoneRegex.test(value)) {
+                              return 'Invalid phone number format';
+                            }
+                            return true;
+                          }
                         }
                       })}
-                      placeholder="Enter your phone number"
+                      placeholder="+1 (555) 123-4567"
                     />
                     {errors.phone && (
                       <div className="invalid-feedback">
@@ -322,7 +337,43 @@ const Register: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-3">
+                    <div className="form-check mb-3">
+                      <input
+                        type="checkbox"
+                        className={`form-check-input ${errors.consentSMSVerification ? 'is-invalid' : ''}`}
+                        id="consentSMSVerification"
+                        {...register('consentSMSVerification', {
+                          required: 'You must consent to SMS verification to proceed'
+                        })}
+                      />
+                      <label className="form-check-label" htmlFor="consentSMSVerification">
+                        I consent to receive SMS messages for phone number verification
+                      </label>
+                      {errors.consentSMSVerification && (
+                        <div className="invalid-feedback d-block">
+                          {errors.consentSMSVerification.message}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="form-check mb-3">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id="consentLotteryUpdates"
+                        {...register('consentLotteryUpdates')}
+                      />
+                      <label className="form-check-label" htmlFor="consentLotteryUpdates">
+                        I consent to receive updates and notifications for{' '}
+                        {watch('selectedLottery') ? (
+                          <strong>{lotteryOptions.find(l => l.value === watch('selectedLottery'))?.label}</strong>
+                        ) : (
+                          'my selected lottery'
+                        )}
+                      </label>
+                    </div>
+
                     <div className="form-check">
                       <input
                         type="checkbox"

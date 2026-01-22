@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSEO } from '../hooks/useSEO';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 
@@ -11,6 +12,18 @@ import 'swiper/css/pagination';
 
 const Home: React.FC = () => {
   const { user, canStartTrial } = useAuth();
+  
+  // SEO Configuration
+  useSEO({
+    title: 'Obyyo - Lottery Prediction Platform | 80-100% Accurate Predictions',
+    description: 'Enhance your lottery winning odds with 80-100% accurate predictions. Get 7 days free trial for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America. No credit card required.',
+    keywords: 'lottery prediction, lottery numbers, winning odds, powerball, megamillion, gopher5, pick3, lotto america, free trial, lottery analysis',
+    url: 'https://obyyo.com/',
+    ogTitle: 'Obyyo - Lottery Prediction Platform | 80-100% Accurate Predictions',
+    ogDescription: 'Enhance your lottery winning odds with 80-100% accurate predictions. Get 7 days free trial for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America.',
+    ogImage: 'https://obyyo.com/logo.png',
+    canonical: 'https://obyyo.com/'
+  });
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Hero slideshow effect

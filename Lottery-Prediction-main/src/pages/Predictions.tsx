@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSEO } from '../hooks/useSEO';
 import { predictionService } from '../services/predictionService';
 import { lotteryService } from '../services/lotteryService';
 import { Prediction, LotteryType, Lottery } from '../types';
@@ -9,6 +10,13 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import toast from 'react-hot-toast';
 
 const Predictions: React.FC = () => {
+  useSEO({
+    title: 'Lottery Predictions - Powerball, Mega Million, Gopher 5, Pick 3, Lotto America | Obyyo',
+    description: 'Browse and purchase accurate lottery predictions for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America. Get 80-100% accurate predictions to improve your winning odds.',
+    keywords: 'lottery predictions, powerball predictions, mega million predictions, gopher 5 predictions, pick 3 predictions, lotto america predictions, buy lottery predictions',
+    url: 'https://obyyo.com/predictions',
+    canonical: 'https://obyyo.com/predictions'
+  });
   const { user, refreshUser } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();

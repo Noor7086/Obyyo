@@ -246,5 +246,46 @@ router.get('/my-stats', protect, async (req, res) => {
   }
 });
 
+// @route   DELETE /api/users/me
+// @desc    Delete current user's account
+// @access  Private
+router.delete('/me', protect, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User ID not found'
+      });
+    }
+
+    // Find and delete user
+    const deletedUser = await User.findByIdAndDelete(userId);
+    
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Also delete associated wallet if exists
+    const Wallet = (await import('../models/Wallet.js')).default;
+    await Wallet.deleteOne({ user: userId });
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete user account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting account'
+    });
+  }
+});
+
 export default router;
 

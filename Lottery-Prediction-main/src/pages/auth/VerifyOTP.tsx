@@ -53,12 +53,22 @@ const VerifyOTP: React.FC = () => {
                 // Mark success to prevent session discard in cleanup
                 isVerifiedSuccess.current = true;
 
-                // Refresh user or navigate
+                // Store the token if provided in the response
+                if (response.data?.token) {
+                    localStorage.setItem('token', response.data.token);
+                    console.log('✅ Token stored after OTP verification');
+                } else {
+                    console.warn('⚠️ No token in OTP verification response:', response);
+                }
+
+                // Refresh user to get updated user data with the new token
                 toast.success('You have registered successfully');
                 await refreshUser();
                 navigate('/dashboard', { replace: true });
             }
         } catch (err: any) {
+            console.error('OTP verification error:', err);
+            console.error('Error response:', err.response?.data);
             setError(err.response?.data?.message || err.message || 'Verification failed. Please try again.');
         } finally {
             setIsSubmitting(false);

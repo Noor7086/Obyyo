@@ -41,8 +41,19 @@ const validateRegistration = [
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   
   body('phone')
+    .notEmpty()
+    .withMessage('Phone number is required')
     .matches(/^\+?[\d\s\-\(\)]+$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('Please provide a valid phone number')
+    .custom((value) => {
+      // Remove all non-digit characters to count digits
+      const digitsOnly = value.replace(/\D/g, '');
+      // Check if phone has at least 10 digits (minimum for a valid phone number)
+      if (digitsOnly.length < 10) {
+        throw new Error('Phone number must contain at least 10 digits');
+      }
+      return true;
+    }),
   
   body('country')
     .notEmpty()
@@ -53,6 +64,19 @@ const validateRegistration = [
   body('selectedLottery')
     .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
     .withMessage('Please select a valid lottery type'),
+  
+  body('consentSMSVerification')
+    .custom((value) => {
+      if (value === true || value === 'true' || value === 1 || value === '1') {
+        return true;
+      }
+      throw new Error('You must consent to SMS verification to proceed');
+    }),
+  
+  body('consentLotteryUpdates')
+    .optional()
+    .isBoolean()
+    .withMessage('Consent for lottery updates must be a boolean value'),
   
   handleValidationErrors
 ];
