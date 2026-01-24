@@ -16,7 +16,8 @@ const Profile: React.FC = () => {
     lastName: user?.lastName || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    selectedLottery: user?.selectedLottery || ''
+    selectedLottery: user?.selectedLottery || '',
+    predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -37,19 +38,44 @@ const Profile: React.FC = () => {
     return sessionStorage.getItem('currentPasswordError');
   });
   const passwordErrorRef = useRef<string | null>(sessionStorage.getItem('currentPasswordError'));
+  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
 
   // Update formData when user changes (but only if not editing)
+  // Skip updating predictionNotificationsEnabled if we're in the middle of updating it
   useEffect(() => {
     if (user && !isEditing) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        selectedLottery: user.selectedLottery || ''
+      setFormData(prev => {
+        const userPredictionNotifications = user.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true;
+        
+        // If we're updating notifications, check if user context now matches what we set
+        if (isUpdatingNotifications) {
+          // If user context matches formData, the update is complete
+          if (userPredictionNotifications === prev.predictionNotificationsEnabled) {
+            setIsUpdatingNotifications(false);
+          }
+          // Don't update predictionNotificationsEnabled while updating
+          return {
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            selectedLottery: user.selectedLottery || '',
+            predictionNotificationsEnabled: prev.predictionNotificationsEnabled
+          };
+        }
+        
+        return {
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          selectedLottery: user.selectedLottery || '',
+          // Use the user's value from context
+          predictionNotificationsEnabled: userPredictionNotifications
+        };
       });
     }
-  }, [user, isEditing]);
+  }, [user, isEditing, isUpdatingNotifications]);
 
   // Restore password error if needed (after React Strict Mode clears it)
   useEffect(() => {
@@ -88,6 +114,10 @@ const Profile: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    // Don't allow phone number changes
+    if (name === 'phone') {
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -131,13 +161,7 @@ const Profile: React.FC = () => {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Validate phone
-    const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!phoneRegex.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
-    }
+    // Phone number is non-editable, so no validation needed
 
     // Validate selectedLottery
     const validLotteries = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
@@ -258,7 +282,15 @@ const Profile: React.FC = () => {
     }
 
     try {
-      const updateData = { ...formData, notificationsEnabled: true };
+      const updateData = { 
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: user?.phone || formData.phone, // Keep original phone, don't allow changes
+        selectedLottery: formData.selectedLottery,
+        notificationsEnabled: true,
+        predictionNotificationsEnabled: formData.predictionNotificationsEnabled
+      };
       await updateProfile(updateData);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
@@ -465,7 +497,8 @@ const Profile: React.FC = () => {
                         lastName: user?.lastName || '',
                         email: user?.email || '',
                         phone: user?.phone || '',
-                        selectedLottery: user?.selectedLottery || ''
+                        selectedLottery: user?.selectedLottery || '',
+                        predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
                       });
                       setErrors({});
                       setMessage(null);
@@ -546,16 +579,14 @@ const Profile: React.FC = () => {
                         type="tel"
                         name="phone"
                         value={formData.phone}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        className={`border-0 bg-light ${errors.phone ? 'is-invalid' : ''}`}
-                        required
+                        disabled={true}
+                        readOnly={true}
+                        className="border-0 bg-light"
                       />
-                      {errors.phone && (
-                        <Form.Control.Feedback type="invalid" className="d-block">
-                          {errors.phone}
-                        </Form.Control.Feedback>
-                      )}
+                      <Form.Text className="text-muted">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Phone number cannot be changed for security reasons
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -582,6 +613,58 @@ const Profile: React.FC = () => {
                     </Form.Control.Feedback>
                   )}
                 </Form.Group>
+                <Form.Group className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="flex-grow-1">
+                      <Form.Label className="fw-medium mb-1">Prediction Notifications</Form.Label>
+                      <Form.Text className="text-muted d-block">
+                        Receive SMS notifications when new predictions are uploaded or results are announced. 
+                        Verification messages (OTP) will always be sent regardless of this setting.
+                      </Form.Text>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="predictionNotificationsEnabled"
+                      name="predictionNotificationsEnabled"
+                      checked={formData.predictionNotificationsEnabled}
+                      onChange={async (e) => {
+                        const newValue = e.target.checked;
+                        // Set flag to prevent useEffect from resetting during update
+                        setIsUpdatingNotifications(true);
+                        // Optimistically update the UI
+                        setFormData(prev => ({
+                          ...prev,
+                          predictionNotificationsEnabled: newValue
+                        }));
+                        // Save immediately when toggled
+                        try {
+                          // Use current formData values but override with the new toggle value
+                          await updateProfile({
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            email: formData.email,
+                            phone: formData.phone,
+                            selectedLottery: formData.selectedLottery,
+                            notificationsEnabled: true,
+                            predictionNotificationsEnabled: newValue
+                          });
+                          toast.success(`Prediction notifications ${newValue ? 'enabled' : 'disabled'}`);
+                          // Flag will be reset by useEffect when user context updates and matches formData
+                        } catch (error: any) {
+                          // Reset flag on error
+                          setIsUpdatingNotifications(false);
+                          // Revert on error - get the value from user context
+                          setFormData(prev => ({
+                            ...prev,
+                            predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
+                          }));
+                          toast.error(error.message || 'Failed to update notification preference');
+                        }
+                      }}
+                      className="ms-3"
+                    />
+                  </div>
+                </Form.Group>
                 {isEditing && (
                   <div className="d-flex gap-2">
                     <Button type="submit" variant="primary" disabled={loading}>
@@ -599,7 +682,8 @@ const Profile: React.FC = () => {
                           lastName: user?.lastName || '',
                           email: user?.email || '',
                           phone: user?.phone || '',
-                          selectedLottery: user?.selectedLottery || ''
+                          selectedLottery: user?.selectedLottery || '',
+                          predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
                         });
                         setErrors({});
                         setMessage(null);
@@ -766,9 +850,9 @@ const Profile: React.FC = () => {
                     if (dateToUse) {
                       try {
                         return new Date(dateToUse).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
                         });
                       } catch (e) {
                         console.error('Error formatting date:', e);

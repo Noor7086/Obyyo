@@ -119,23 +119,26 @@ class AuthService {
     }
   }
 
-  async forgotPassword(email: string): Promise<void> {
-    const response = await apiService.post<ApiResponse>('/auth/forgot-password', { email });
+  async forgotPassword(phone: string, consentSMSVerification: boolean): Promise<void> {
+    const response = await apiService.post<ApiResponse>('/auth/forgot-password', { 
+      phone,
+      consentSMSVerification 
+    });
     if (!response.success) {
       throw new Error(response.message || 'Failed to send reset code');
     }
   }
 
-  async verifyResetCode(email: string, code: string): Promise<void> {
-    const response = await apiService.post<ApiResponse>('/auth/verify-reset-code', { email, code });
+  async verifyResetCode(phone: string, code: string): Promise<void> {
+    const response = await apiService.post<ApiResponse>('/auth/verify-reset-code', { phone, code });
     if (!response.success) {
       throw new Error(response.message || 'Invalid or expired reset code');
     }
   }
 
-  async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+  async resetPassword(phone: string, code: string, newPassword: string): Promise<void> {
     const response = await apiService.post<ApiResponse>('/auth/reset-password', {
-      email,
+      phone,
       code,
       newPassword
     });

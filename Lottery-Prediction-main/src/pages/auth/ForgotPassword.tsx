@@ -6,16 +6,17 @@ import toast from 'react-hot-toast';
 import logo from '../../assets/logo.png';
 
 interface ForgotPasswordForm {
-  email: string;
+  phone: string;
+  consentSMSVerification: boolean;
 }
 
 interface VerifyCodeForm {
-  email: string;
+  phone: string;
   code: string;
 }
 
 interface ResetPasswordForm {
-  email: string;
+  phone: string;
   code: string;
   newPassword: string;
   confirmPassword: string;
@@ -23,26 +24,26 @@ interface ResetPasswordForm {
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'email' | 'code' | 'reset'>('email');
-  const [email, setEmail] = useState('');
+  const [step, setStep] = useState<'phone' | 'code' | 'reset'>('phone');
+  const [phone, setPhone] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const emailForm = useForm<ForgotPasswordForm>();
+  const phoneForm = useForm<ForgotPasswordForm>();
   const codeForm = useForm<VerifyCodeForm>();
   const resetForm = useForm<ResetPasswordForm>();
 
   // Step 1: Request reset code
-  const onEmailSubmit = async (data: ForgotPasswordForm) => {
+  const onPhoneSubmit = async (data: ForgotPasswordForm) => {
     try {
       setIsSubmitting(true);
-      await authService.forgotPassword(data.email);
-      // Only proceed if email was successfully sent (backend confirms user exists and email sent)
-      setEmail(data.email);
+      await authService.forgotPassword(data.phone, data.consentSMSVerification);
+      // Only proceed if SMS was successfully sent (backend confirms user exists and SMS sent)
+      setPhone(data.phone);
       setStep('code');
-      toast.success('Reset code has been sent to your email');
+      toast.success('Reset code has been sent to your phone');
     } catch (error: any) {
-      // Show error message from backend (email doesn't exist, SMTP not configured, etc.)
+      // Show error message from backend (phone doesn't exist, etc.)
       toast.error(error.message || 'Failed to send reset code');
     } finally {
       setIsSubmitting(false);
@@ -53,7 +54,7 @@ const ForgotPassword: React.FC = () => {
   const onCodeSubmit = async (data: VerifyCodeForm) => {
     try {
       setIsSubmitting(true);
-      await authService.verifyResetCode(data.email, data.code);
+      await authService.verifyResetCode(data.phone, data.code);
       setResetCode(data.code);
       setStep('reset');
       toast.success('Code verified successfully');
@@ -73,7 +74,7 @@ const ForgotPassword: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      await authService.resetPassword(data.email, data.code, data.newPassword);
+      await authService.resetPassword(data.phone, data.code, data.newPassword);
       toast.success('Password has been reset successfully');
       navigate('/login');
     } catch (error: any) {
@@ -104,37 +105,65 @@ const ForgotPassword: React.FC = () => {
                   </Link>
                   <h2 className="mt-3 mb-2">Reset Password</h2>
                   <p className="text-muted">
-                    {step === 'email' && 'Enter your email to receive a reset code'}
-                    {step === 'code' && 'Enter the 6-digit code sent to your email'}
+                    {step === 'phone' && 'Enter your phone number to receive a reset code via SMS'}
+                    {step === 'code' && 'Enter the 6-digit code sent to your phone'}
                     {step === 'reset' && 'Enter your new password'}
                   </p>
                 </div>
 
-                {/* Step 1: Email Input */}
-                {step === 'email' && (
-                  <form onSubmit={emailForm.handleSubmit(onEmailSubmit)}>
+                {/* Step 1: Phone Input */}
+                {step === 'phone' && (
+                  <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)}>
                     <div className="mb-3">
-                      <label htmlFor="email" className="form-label">
-                        Email Address
+                      <label htmlFor="phone" className="form-label">
+                        Phone Number
                       </label>
                       <input
-                        type="email"
-                        className={`form-control ${emailForm.formState.errors.email ? 'is-invalid' : ''}`}
-                        id="email"
-                        {...emailForm.register('email', {
-                          required: 'Email is required',
+                        type="tel"
+                        className={`form-control ${phoneForm.formState.errors.phone ? 'is-invalid' : ''}`}
+                        id="phone"
+                        {...phoneForm.register('phone', {
+                          required: 'Phone number is required',
                           pattern: {
-                            value: /^\S+@\S+$/i,
-                            message: 'Invalid email address'
+                            value: /^\+?[\d\s\-\(\)]+$/,
+                            message: 'Please enter a valid phone number'
+                          },
+                          validate: (value) => {
+                            const digitsOnly = value.replace(/\D/g, '');
+                            if (digitsOnly.length < 10) {
+                              return 'Phone number must contain at least 10 digits';
+                            }
+                            return true;
                           }
                         })}
-                        placeholder="Enter your email"
+                        placeholder="Enter your phone number"
                       />
-                      {emailForm.formState.errors.email && (
+                      {phoneForm.formState.errors.phone && (
                         <div className="invalid-feedback">
-                          {emailForm.formState.errors.email.message}
+                          {phoneForm.formState.errors.phone.message}
                         </div>
                       )}
+                    </div>
+
+                    <div className="mb-3">
+                      <div className="form-check">
+                        <input
+                          className={`form-check-input ${phoneForm.formState.errors.consentSMSVerification ? 'is-invalid' : ''}`}
+                          type="checkbox"
+                          id="consentSMSVerification"
+                          {...phoneForm.register('consentSMSVerification', {
+                            required: 'You must consent to SMS verification to reset your password'
+                          })}
+                        />
+                        <label className="form-check-label" htmlFor="consentSMSVerification">
+                          I consent to receive SMS verification code to reset my password
+                        </label>
+                        {phoneForm.formState.errors.consentSMSVerification && (
+                          <div className="invalid-feedback d-block">
+                            {phoneForm.formState.errors.consentSMSVerification.message}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="d-grid mb-3">
@@ -159,7 +188,7 @@ const ForgotPassword: React.FC = () => {
                 {/* Step 2: Code Verification */}
                 {step === 'code' && (
                   <form onSubmit={codeForm.handleSubmit(onCodeSubmit)}>
-                    <input type="hidden" {...codeForm.register('email')} value={email} />
+                    <input type="hidden" {...codeForm.register('phone')} value={phone} />
                     <div className="mb-3">
                       <label htmlFor="code" className="form-label">
                         Verification Code
@@ -185,7 +214,7 @@ const ForgotPassword: React.FC = () => {
                         </div>
                       )}
                       <small className="text-muted d-block mt-2">
-                        Enter the 6-digit code sent to {email}
+                        Enter the 6-digit code sent to {phone}
                       </small>
                     </div>
 
@@ -211,11 +240,11 @@ const ForgotPassword: React.FC = () => {
                         type="button"
                         className="btn btn-link text-decoration-none"
                         onClick={() => {
-                          setStep('email');
+                          setStep('phone');
                           codeForm.reset();
                         }}
                       >
-                        Change email address
+                        Change phone number
                       </button>
                     </div>
                   </form>
@@ -224,7 +253,7 @@ const ForgotPassword: React.FC = () => {
                 {/* Step 3: Reset Password */}
                 {step === 'reset' && (
                   <form onSubmit={resetForm.handleSubmit(onResetSubmit)}>
-                    <input type="hidden" {...resetForm.register('email')} value={email} />
+                    <input type="hidden" {...resetForm.register('phone')} value={phone} />
                     <input type="hidden" {...resetForm.register('code')} value={resetCode} />
                     
                     <div className="mb-3">

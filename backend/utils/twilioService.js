@@ -161,23 +161,52 @@ export const sendOTP = async (to, otp) => {
  */
 export const notifyUsersByLottery = async (lotteryType, message) => {
     try {
-        // Find users who have selected this lottery and have notifications enabled
+        // Find users who have selected this lottery and have prediction notifications enabled
         // Also ensure they have a phone number
+        // Note: predictionNotificationsEnabled controls prediction updates only
+        // Verification messages (OTP) are always sent regardless of this setting
+        // Exclude admin users from prediction notifications
         const users = await User.find({
             selectedLottery: lotteryType,
-            notificationsEnabled: true,
-            phone: { $exists: true, $ne: '' }
+            predictionNotificationsEnabled: true,  // Only match users with this explicitly set to true
+            phone: { $exists: true, $ne: '' },
+            role: { $ne: 'admin' }  // Exclude admin users
+        }).select('phone predictionNotificationsEnabled selectedLottery role _id');
+
+        // Double-check: filter out any users where predictionNotificationsEnabled is not explicitly true
+        // Also exclude admin users (should already be filtered by query, but double-check for safety)
+        // This ensures we don't send to users who have disabled notifications or where the field is missing/undefined
+        const eligibleUsers = users.filter(user => {
+            const isEnabled = user.predictionNotificationsEnabled === true;
+            const isNotAdmin = user.role !== 'admin';
+            
+            if (!isEnabled) {
+                console.log(`Skipping user ${user.phone} - predictionNotificationsEnabled is: ${user.predictionNotificationsEnabled} (type: ${typeof user.predictionNotificationsEnabled})`);
+            }
+            if (!isNotAdmin) {
+                console.log(`Skipping admin user ${user.phone} - admins do not receive prediction notifications`);
+            }
+            
+            return isEnabled && isNotAdmin;
         });
 
-        console.log(`Found ${users.length} users to notify for ${lotteryType}`);
+        console.log(`Found ${users.length} total users for ${lotteryType}, ${eligibleUsers.length} with prediction notifications enabled`);
+
+        if (eligibleUsers.length === 0) {
+            console.log('No users eligible for prediction notifications - all users have disabled this feature');
+            return 0;
+        }
 
         // Send messages in parallel (or consider batching/queueing for large scale)
         // Using SMS by default as per request. Can be switched to sendWhatsAppMessage if preferred.
         // Or could check user preference. For now, using SMS.
-        const promises = users.map(user => sendSMS(user.phone, message));
+        const promises = eligibleUsers.map(user => {
+            console.log(`Sending prediction notification to ${user.phone} (predictionNotificationsEnabled: ${user.predictionNotificationsEnabled})`);
+            return sendSMS(user.phone, message);
+        });
         await Promise.all(promises);
 
-        return users.length;
+        return eligibleUsers.length;
     } catch (error) {
         console.error('Error in notifyUsersByLottery:', error);
         return 0;

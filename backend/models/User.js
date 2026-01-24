@@ -103,6 +103,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  predictionNotificationsEnabled: {
+    type: Boolean,
+    default: true
+  },
   resetPasswordCode: {
     type: String,
     default: null
@@ -118,6 +122,11 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
+
+  // Check if password is already hashed (bcrypt hashes start with $2a$, $2b$, or $2y$ and are 60 chars)
+  if (this.password && /^\$2[ayb]\$\d{2}\$.{53}$/.test(this.password)) {
+    return next();
+  }
 
   try {
     const salt = await bcrypt.genSalt(12);

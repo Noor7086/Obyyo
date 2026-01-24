@@ -53,12 +53,21 @@ const register = async (req, res) => {
     // Normalize phone number before storing
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // Check if user already exists in User collection
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Check if user already exists in User collection by email
+    const existingUserByEmail = await User.findOne({ email });
+    if (existingUserByEmail) {
       return res.status(400).json({
         success: false,
         message: 'User already exists with this email'
+      });
+    }
+
+    // Check if user already exists in User collection by phone number
+    const existingUserByPhone = await User.findOne({ phone: normalizedPhone });
+    if (existingUserByPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account already exists with this phone number'
       });
     }
 
@@ -132,9 +141,14 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
 
+    // Normalize email to lowercase for consistent lookup
+    // (User schema has lowercase: true, but ensure we match correctly)
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Find user and include password for comparison
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
     if (!user) {
+      console.log(`Login attempt failed: User not found for email: ${normalizedEmail}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -143,6 +157,7 @@ const login = async (req, res) => {
 
     // Check if user is active
     if (!user.isActive) {
+      console.log(`Login attempt failed: Account deactivated for email: ${normalizedEmail}`);
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated'
@@ -152,6 +167,7 @@ const login = async (req, res) => {
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      console.log(`Login attempt failed: Invalid password for email: ${normalizedEmail}, role: ${user.role}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -187,6 +203,8 @@ const login = async (req, res) => {
           walletBalance: walletBalance,
           isPhoneVerified: user.isPhoneVerified,
           role: user.role,
+          notificationsEnabled: user.notificationsEnabled,
+          predictionNotificationsEnabled: user.predictionNotificationsEnabled,
           createdAt: getUserCreatedAt(user)
         },
         token
@@ -254,6 +272,7 @@ const getMe = async (req, res) => {
           walletBalance: walletBalance,
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
+          predictionNotificationsEnabled: user.predictionNotificationsEnabled,
           isPhoneVerified: user.isPhoneVerified,
           createdAt: getUserCreatedAt(user)
         }
@@ -273,7 +292,7 @@ const getMe = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, selectedLottery, notificationsEnabled } = req.body;
+    const { firstName, lastName, email, phone, selectedLottery, notificationsEnabled, predictionNotificationsEnabled } = req.body;
     const userId = req.user.userId;
 
     const user = await User.findById(userId);
@@ -289,6 +308,7 @@ const updateProfile = async (req, res) => {
     if (lastName) user.lastName = lastName;
     if (phone) user.phone = normalizePhoneNumber(phone);
     if (notificationsEnabled !== undefined) user.notificationsEnabled = notificationsEnabled;
+    if (predictionNotificationsEnabled !== undefined) user.predictionNotificationsEnabled = predictionNotificationsEnabled;
 
     // Update email if provided and different from current
     if (email && email !== user.email) {
@@ -328,6 +348,7 @@ const updateProfile = async (req, res) => {
           walletBalance: user.walletBalance,
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
+          predictionNotificationsEnabled: user.predictionNotificationsEnabled,
           createdAt: getUserCreatedAt(user)
         }
       }
@@ -395,7 +416,7 @@ const generateResetCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// @desc    Forgot password - send reset code to email
+// @desc    Forgot password - send reset code to phone via SMS
 // @route   POST /api/auth/forgot-password
 // @access  Public
 const forgotPassword = async (req, res) => {
@@ -409,39 +430,31 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    const { email } = req.body;
-    const normalizedEmail = email.toLowerCase().trim();
+    const { phone, consentSMSVerification } = req.body;
+    
+    // Normalize phone number
+    const normalizedPhone = normalizePhoneNumber(phone);
 
-    // Check SMTP configuration FIRST - if not configured, return error immediately
-    // This prevents false success messages when email service is unavailable
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      console.warn('Password reset requested but SMTP is not configured');
-      return res.status(500).json({
-        success: false,
-        message: 'Email service is not configured. Please contact support to reset your password.'
-      });
-    }
+    // Find user by phone number - ONLY registered users can reset password
+    const user = await User.findOne({ phone: normalizedPhone });
 
-    // Find user by email - ONLY registered users can reset password
-    const user = await User.findOne({ email: normalizedEmail });
-
-    // IMPORTANT: Only proceed if user exists - no code generation or email sending for non-registered emails
+    // IMPORTANT: Only proceed if user exists - no code generation or SMS sending for non-registered phone numbers
     if (!user) {
       // Log for debugging
-      console.log(`Password reset requested for non-registered email: ${normalizedEmail} - NO CODE GENERATED, NO EMAIL SENT`);
-      // Return error for non-registered email with sign up suggestion
+      console.log(`Password reset requested for non-registered phone: ${normalizedPhone} - NO CODE GENERATED, NO SMS SENT`);
+      // Return error for non-registered phone with sign up suggestion
       return res.status(404).json({
         success: false,
-        message: 'No user found with this email address. Please sign up to create an account.'
+        message: 'No account found with this phone number. Please sign up to create an account.'
       });
     }
 
     // User exists - proceed with password reset
-    console.log(`Password reset code requested for registered email: ${normalizedEmail}`);
+    console.log(`Password reset code requested for registered phone: ${normalizedPhone}`);
 
     // Check if user is active
     if (!user.isActive) {
-      console.log(`Password reset denied for deactivated account: ${normalizedEmail}`);
+      console.log(`Password reset denied for deactivated account: ${normalizedPhone}`);
       return res.status(403).json({
         success: false,
         message: 'Account is deactivated. Please contact support.'
@@ -460,48 +473,21 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordCodeExpires = resetCodeExpires;
     await user.save();
 
-    // Send email with reset code (ONLY for registered, active users)
-    // Double-check user exists before sending (redundant but explicit)
-    if (!user || !user.email) {
-      console.error('Critical error: Attempted to send email to non-existent user');
-      // Clear the code
-      user.resetPasswordCode = null;
-      user.resetPasswordCodeExpires = null;
-      await user.save();
-      return res.status(500).json({
-        success: false,
-        message: 'An error occurred. Please try again later.'
-      });
-    }
-
+    // Send SMS with reset code (ONLY for registered, active users)
     try {
-      console.log(`Sending password reset email to registered user: ${user.email}`);
-      const emailResult = await sendForgotPasswordEmail(user, resetCode);
+      console.log(`Sending password reset SMS to registered user: ${normalizedPhone}`);
+      await sendOTP(normalizedPhone, resetCode);
 
-      // Check if email was actually sent
-      if (!emailResult || !emailResult.success) {
-        console.error('Email service not configured or failed:', emailResult?.message);
-        // Clear the code if email service is not configured
-        user.resetPasswordCode = null;
-        user.resetPasswordCodeExpires = null;
-        await user.save();
+      console.log(`Password reset SMS sent successfully to: ${normalizedPhone}`);
 
-        return res.status(500).json({
-          success: false,
-          message: 'Email service is not configured. Please contact support.'
-        });
-      }
-
-      console.log(`Password reset email sent successfully to: ${user.email}`);
-
-      // Return success only if email was actually sent
+      // Return success only if SMS was sent
       return res.json({
         success: true,
-        message: 'Password reset code has been sent to your email address.'
+        message: 'Password reset code has been sent to your phone number.'
       });
-    } catch (emailError) {
-      console.error('Failed to send forgot password email:', emailError);
-      // Clear the code if email fails
+    } catch (smsError) {
+      console.error('Failed to send forgot password SMS:', smsError);
+      // Clear the code if SMS fails
       user.resetPasswordCode = null;
       user.resetPasswordCodeExpires = null;
       await user.save();
@@ -534,14 +520,17 @@ const verifyResetCode = async (req, res) => {
       });
     }
 
-    const { email, code } = req.body;
+    const { phone, code } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Normalize phone number
+    const normalizedPhone = normalizePhoneNumber(phone);
+
+    // Find user by phone number
+    const user = await User.findOne({ phone: normalizedPhone });
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Invalid email or reset code'
+        message: 'No account found with this phone number'
       });
     }
 
@@ -593,14 +582,17 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    const { email, code, newPassword } = req.body;
+    const { phone, code, newPassword } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    // Normalize phone number
+    const normalizedPhone = normalizePhoneNumber(phone);
+
+    // Find user by phone number
+    const user = await User.findOne({ phone: normalizedPhone }).select('+password');
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Invalid email or reset code'
+        message: 'No account found with this phone number'
       });
     }
 

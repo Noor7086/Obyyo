@@ -36,7 +36,54 @@ const Predictions: React.FC = () => {
   const [loadingPredictionId, setLoadingPredictionId] = useState<string | null>(null);
   const [trialMessage, setTrialMessage] = useState<string | null>(null);
   const [acknowledgeDisclaimer, setAcknowledgeDisclaimer] = useState(false);
+  const [hasUsedFreeViewToday, setHasUsedFreeViewToday] = useState(false);
+  const [purchasedPredictionIds, setPurchasedPredictionIds] = useState<Set<string>>(new Set());
   const prevLocationRef = useRef<string>('');
+
+  // Fetch user's purchases to check which predictions they have access to
+  useEffect(() => {
+    const fetchPurchases = async () => {
+      if (user) {
+        try {
+          const purchases = await predictionService.getMyPurchases(1, 100);
+          // Create a set of prediction IDs that user has purchased/viewed
+          const purchasedIds = new Set<string>();
+          
+          // Check if user has used their free view today
+          const now = new Date();
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          let hasUsedFreeView = false;
+          
+          purchases.forEach(purchase => {
+            if (purchase.prediction?.id) {
+              purchasedIds.add(purchase.prediction.id);
+            }
+            
+            // Check if there's a trial purchase from today (free view)
+            if (purchase.paymentStatus === 'trial' || purchase.isTrialView) {
+              const purchaseDate = new Date(purchase.createdAt);
+              const purchaseStart = new Date(purchaseDate.getFullYear(), purchaseDate.getMonth(), purchaseDate.getDate());
+              if (purchaseStart.getTime() === todayStart.getTime()) {
+                hasUsedFreeView = true;
+              }
+            }
+          });
+          
+          setPurchasedPredictionIds(purchasedIds);
+          setHasUsedFreeViewToday(hasUsedFreeView);
+        } catch (error) {
+          console.error('Error fetching purchases:', error);
+          // Don't show error toast, just log it
+        }
+      } else {
+        setPurchasedPredictionIds(new Set());
+        setHasUsedFreeViewToday(false);
+      }
+    };
+    fetchPurchases();
+  }, [user]);
+
+  // hasUsedFreeViewToday is now set in the fetchPurchases useEffect above
 
   // Fetch lotteries on component mount
   useEffect(() => {
@@ -221,15 +268,13 @@ const Predictions: React.FC = () => {
       });
 
       if (isInTrial && userSelectedLottery === currentSelectedLottery) {
-        // Fetch trial predictions (free) - 1 per day
+        // Fetch trial predictions (free)
         console.log('📥 Fetching trial predictions for:', lotteryType);
         try {
           const trialData = await predictionService.getTrialPredictions(lotteryType);
           console.log('✅ Trial predictions received:', trialData);
-          // For trial users: Show only 1 prediction per day (backend should return only 1)
-          // Limit to 1 prediction in case backend returns multiple
-          const limitedPredictions = (trialData.predictions || []).slice(0, 1);
-          setPredictions(limitedPredictions);
+          // Show all trial predictions returned by backend (up to 5)
+          setPredictions(trialData.predictions || []);
           if (trialData.message) {
             setTrialMessage(trialData.message);
           }
@@ -414,13 +459,42 @@ const Predictions: React.FC = () => {
         setPurchasedPrediction(fullPrediction);
         setShowTrialPredictionModal(true); // Use separate trial modal
         toast.success('Prediction loaded successfully!');
+        // Mark that they've used their free view today
+        setHasUsedFreeViewToday(true);
+        // Add to purchased set so it shows View button
+        setPurchasedPredictionIds(prev => new Set(prev).add(prediction.id));
 
-        // Refresh predictions list after viewing (to update the one-per-day status)
+        // Refresh predictions list and purchases after viewing (to update the one-per-day status)
         await fetchPredictions();
+        // Refresh purchases to update hasUsedFreeViewToday
+        const purchases = await predictionService.getMyPurchases(1, 100);
+        const purchasedIds = new Set<string>();
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let hasUsedFreeView = false;
+        
+        purchases.forEach(purchase => {
+          if (purchase.prediction?.id) {
+            purchasedIds.add(purchase.prediction.id);
+          }
+          
+          // Check if there's a trial purchase from today (free view)
+          if (purchase.paymentStatus === 'trial' || purchase.isTrialView) {
+            const purchaseDate = new Date(purchase.createdAt);
+            const purchaseStart = new Date(purchaseDate.getFullYear(), purchaseDate.getMonth(), purchaseDate.getDate());
+            if (purchaseStart.getTime() === todayStart.getTime()) {
+              hasUsedFreeView = true;
+            }
+          }
+        });
+        
+        setPurchasedPredictionIds(purchasedIds);
+        setHasUsedFreeViewToday(hasUsedFreeView);
       } catch (error: any) {
         console.error('❌ Error fetching trial prediction details:', error);
         console.error('❌ Error response:', error.response?.data);
         console.error('❌ Error message:', error.message);
+        console.error('❌ Error status:', error.response?.status);
 
         // Get the actual error message from the response
         let errorMessage = 'Failed to load prediction details';
@@ -431,24 +505,66 @@ const Predictions: React.FC = () => {
         }
 
         console.error('❌ Final error message:', errorMessage);
+        console.error('❌ Checking if should open payment modal...');
 
-        // Check if it's the "already viewed today" error
-        if (errorMessage.includes('already viewed') || errorMessage.includes('already viewed your free prediction')) {
-          toast.error('You have already used your daily free prediction for today. Come back tomorrow for a new prediction!');
-        } else if (error.response?.status === 403) {
-          // Show the specific error message from backend
-          toast.error(errorMessage || 'Access denied. Please check your trial status.');
-        } else {
-          toast.error(errorMessage);
-        }
+        // Clear loading state first in all error cases
+        setLoadingPredictionDetails(false);
+        setLoadingPredictionId(null);
 
-        // If it's a "already viewed today" error, refresh the list
-        if (errorMessage.includes('already viewed') || error.response?.status === 403) {
+        // Check if it's the "already viewed today" error (403 status or specific message)
+        const isAlreadyViewedError = error.response?.status === 403 || 
+          errorMessage.toLowerCase().includes('already viewed') || 
+          errorMessage.toLowerCase().includes('free prediction');
+        
+        if (isAlreadyViewedError) {
+          console.log('✅ Opening payment modal for already viewed prediction');
+          // Mark that they've used their free view today
+          setHasUsedFreeViewToday(true);
+          // Refresh purchases to update the state
+          try {
+            const purchases = await predictionService.getMyPurchases(1, 100);
+            const purchasedIds = new Set<string>();
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            let hasUsedFreeView = false;
+            
+            purchases.forEach(purchase => {
+              if (purchase.prediction?.id) {
+                purchasedIds.add(purchase.prediction.id);
+              }
+              
+              // Check if there's a trial purchase from today (free view)
+              if (purchase.paymentStatus === 'trial' || purchase.isTrialView) {
+                const purchaseDate = new Date(purchase.createdAt);
+                const purchaseStart = new Date(purchaseDate.getFullYear(), purchaseDate.getMonth(), purchaseDate.getDate());
+                if (purchaseStart.getTime() === todayStart.getTime()) {
+                  hasUsedFreeView = true;
+                }
+              }
+            });
+            
+            setPurchasedPredictionIds(purchasedIds);
+            setHasUsedFreeViewToday(hasUsedFreeView);
+          } catch (purchaseError) {
+            console.error('Error refreshing purchases:', purchaseError);
+          }
+          
+          // Instead of just showing error, allow them to purchase the prediction
+          toast.success('You have already used your daily free prediction. You can purchase this prediction to view it.');
+          // Open payment modal so they can purchase it
+          setSelectedPrediction(prediction);
+          setAcknowledgeDisclaimer(false); // Reset checkbox when opening modal
+          setShowPaymentModal(true);
+          // Refresh the list to update any status changes
           await fetchPredictions();
+        } else {
+          // For other errors, show the error message
+          toast.error(errorMessage || 'Failed to load prediction details');
         }
       } finally {
+        // Safety net: ensure loading is always cleared
         setLoadingPredictionDetails(false);
-        setLoadingPredictionId(null); // Clear loading state
+        setLoadingPredictionId(null);
       }
     } else {
       // For non-trial users or different lottery, show payment modal
@@ -503,6 +619,11 @@ const Predictions: React.FC = () => {
 
         setPurchasedPrediction(fullPrediction);
 
+        // Add to purchased set so it shows View button
+        if (selectedPrediction) {
+          setPurchasedPredictionIds(prev => new Set(prev).add(selectedPrediction.id));
+        }
+
         // Close payment modal and open prediction view modal
         setShowPaymentModal(false);
         setShowPredictionModal(true);
@@ -515,6 +636,10 @@ const Predictions: React.FC = () => {
         console.error('Error fetching prediction details:', detailsError);
         // If we can't fetch details, show a message but still close payment modal
         setShowPaymentModal(false);
+        // Still add to purchased set even if details fetch failed
+        if (selectedPrediction) {
+          setPurchasedPredictionIds(prev => new Set(prev).add(selectedPrediction.id));
+        }
         toast.error('Purchase successful, but failed to load prediction details. Please refresh and try viewing from "My Predictions".');
       }
 
@@ -565,6 +690,11 @@ const Predictions: React.FC = () => {
 
         setPurchasedPrediction(fullPrediction);
 
+        // Add to purchased set so it shows View button
+        if (selectedPrediction) {
+          setPurchasedPredictionIds(prev => new Set(prev).add(selectedPrediction.id));
+        }
+
         // Close payment modal and open prediction view modal
         setShowPaymentModal(false);
         setShowPredictionModal(true);
@@ -577,6 +707,10 @@ const Predictions: React.FC = () => {
         console.error('Error fetching prediction details:', detailsError);
         // If we can't fetch details, show a message but still close payment modal
         setShowPaymentModal(false);
+        // Still add to purchased set even if details fetch failed
+        if (selectedPrediction) {
+          setPurchasedPredictionIds(prev => new Set(prev).add(selectedPrediction.id));
+        }
         toast.error('Purchase successful, but failed to load prediction details. Please refresh and try viewing from "My Predictions".');
       }
 
@@ -1003,44 +1137,101 @@ const Predictions: React.FC = () => {
                                   const isInTrial = user?.isInTrial || (user?.trialEndDate && new Date(user.trialEndDate) >= new Date());
                                   const userSelectedLottery = user?.selectedLottery?.toLowerCase();
                                   const currentSelectedLottery = selectedLottery?.toLowerCase();
-                                  return isInTrial && userSelectedLottery === currentSelectedLottery;
-                                })() ? (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={(e) => handlePurchaseClick(prediction, e)}
-                                    disabled={loadingPredictionDetails && loadingPredictionId === prediction.id}
-                                  >
-                                    {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
-                                      <>
-                                        <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                                        Loading...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <i className="bi bi-eye me-1"></i>
-                                        View More
-                                      </>
-                                    )}
-                                  </button>
-                                ) : (
-                                  <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={(e) => handlePurchaseClick(prediction, e)}
-                                    disabled={paymentLoading || (loadingPredictionDetails && loadingPredictionId === prediction.id)}
-                                  >
-                                    {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
-                                      <>
-                                        <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                                        Loading...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <i className="bi bi-cart me-1"></i>
-                                        Purchase
-                                      </>
-                                    )}
-                                  </button>
-                                )}
+                                  const trialMatches = isInTrial && userSelectedLottery === currentSelectedLottery;
+                                  const hasPurchased = purchasedPredictionIds.has(prediction.id);
+                                  
+                                  // If user has purchased/viewed this prediction, show View button
+                                  if (hasPurchased) {
+                                    return (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={async (e) => {
+                                          e.preventDefault();
+                                          try {
+                                            setLoadingPredictionDetails(true);
+                                            setLoadingPredictionId(prediction.id);
+                                            const fullPrediction = await predictionService.getPredictionDetails(
+                                              prediction.lotteryType,
+                                              prediction.id
+                                            );
+                                            setPurchasedPrediction(fullPrediction);
+                                            // Check if it was a trial view or purchase
+                                            const isTrialView = trialMatches && !hasUsedFreeViewToday;
+                                            if (isTrialView) {
+                                              setShowTrialPredictionModal(true);
+                                            } else {
+                                              setShowPredictionModal(true);
+                                            }
+                                          } catch (error: any) {
+                                            toast.error(error.message || 'Failed to load prediction');
+                                          } finally {
+                                            setLoadingPredictionDetails(false);
+                                            setLoadingPredictionId(null);
+                                          }
+                                        }}
+                                        disabled={loadingPredictionDetails && loadingPredictionId === prediction.id}
+                                      >
+                                        {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
+                                          <>
+                                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            Loading...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <i className="bi bi-eye me-1"></i>
+                                            View
+                                          </>
+                                        )}
+                                      </button>
+                                    );
+                                  }
+                                  
+                                  // If trial user and hasn't used free view today AND hasn't purchased this prediction, show View More
+                                  // Otherwise show Purchase button
+                                  if (trialMatches && !hasUsedFreeViewToday && !hasPurchased) {
+                                    return (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={(e) => handlePurchaseClick(prediction, e)}
+                                        disabled={loadingPredictionDetails && loadingPredictionId === prediction.id}
+                                      >
+                                        {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
+                                          <>
+                                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            Loading...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <i className="bi bi-eye me-1"></i>
+                                            View More
+                                          </>
+                                        )}
+                                      </button>
+                                    );
+                                  }
+                                  
+                                  // Show Purchase button for all other cases
+                                  // (trial user who used free view, or non-trial user, or already purchased)
+                                  return (
+                                    <button
+                                      className="btn btn-sm btn-primary"
+                                      onClick={(e) => handlePurchaseClick(prediction, e)}
+                                      disabled={paymentLoading || (loadingPredictionDetails && loadingPredictionId === prediction.id)}
+                                    >
+                                      {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
+                                        <>
+                                          <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                                          Loading...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <i className="bi bi-cart me-1"></i>
+                                          Purchase
+                                        </>
+                                      )}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>

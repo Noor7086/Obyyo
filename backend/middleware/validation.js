@@ -150,20 +150,39 @@ const validatePasswordChange = [
 
 // Forgot password validation
 const validateForgotPassword = [
-  body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail(),
+  body('phone')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .matches(/^\+?[\d\s\-\(\)]+$/)
+    .withMessage('Please provide a valid phone number')
+    .custom((value) => {
+      // Remove all non-digit characters to count digits
+      const digitsOnly = value.replace(/\D/g, '');
+      // Check if phone has at least 10 digits (minimum for a valid phone number)
+      if (digitsOnly.length < 10) {
+        throw new Error('Phone number must contain at least 10 digits');
+      }
+      return true;
+    }),
+  
+  body('consentSMSVerification')
+    .custom((value) => {
+      if (value === true || value === 'true' || value === 1 || value === '1') {
+        return true;
+      }
+      throw new Error('You must consent to SMS verification to reset your password');
+    }),
   
   handleValidationErrors
 ];
 
 // Verify reset code validation
 const validateVerifyResetCode = [
-  body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail(),
+  body('phone')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .matches(/^\+?[\d\s\-\(\)]+$/)
+    .withMessage('Please provide a valid phone number'),
   
   body('code')
     .notEmpty()
@@ -178,10 +197,11 @@ const validateVerifyResetCode = [
 
 // Reset password validation
 const validateResetPassword = [
-  body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail(),
+  body('phone')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .matches(/^\+?[\d\s\-\(\)]+$/)
+    .withMessage('Please provide a valid phone number'),
   
   body('code')
     .notEmpty()

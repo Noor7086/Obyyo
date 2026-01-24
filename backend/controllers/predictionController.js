@@ -529,12 +529,12 @@ const purchasePrediction = async (req, res) => {
       });
     }
 
-    // Check if user is in trial period and has selected this lottery
+    // Allow trial users to purchase predictions even if they're in trial
+    // They can use their free daily view OR purchase predictions
+    // This allows them to purchase if they've already used their free view for the day
     if (user.isInTrial() && user.selectedLottery === lotteryType) {
-      return res.status(400).json({
-        success: false,
-        message: 'This prediction is free during your trial period'
-      });
+      console.log('✅ Trial user purchasing prediction - allowing purchase');
+      // No need to block - let them purchase if they want
     }
 
     // Handle wallet payment

@@ -7,6 +7,7 @@ import Prediction from '../models/Prediction.js';
 import Purchase from '../models/Purchase.js';
 import Lottery from '../models/Lottery.js';
 import Result from '../models/Result.js';
+import Wallet from '../models/Wallet.js';
 import { getAdminPayments, getPaymentStats } from '../controllers/paymentController.js';
 import { notifyUsersByLottery } from '../utils/twilioService.js';
 
@@ -110,10 +111,6 @@ router.delete('/payments', protect, authorize('admin'), async (req, res) => {
     });
   }
 });
-
-import Wallet from '../models/Wallet.js';
-
-// ... existing imports ...
 
 // @route   GET /api/admin/stats
 // @desc    Get admin dashboard statistics
@@ -412,12 +409,25 @@ router.get('/users', protect, authorize('admin'), validatePagination, async (req
 
     const total = await User.countDocuments(query);
 
-    // Transform users to include id field (from _id)
-    const transformedUsers = users.map(user => ({
-      ...user.toObject(),
-      id: user._id.toString(),
-      _id: user._id.toString() // Keep _id as well for compatibility
-    }));
+    // Get wallet balances for all users from Wallet model (source of truth)
+    const userIds = users.map(user => user._id);
+    const wallets = await Wallet.find({ user: { $in: userIds } });
+    const walletMap = new Map();
+    wallets.forEach(wallet => {
+      walletMap.set(wallet.user.toString(), wallet.balance);
+    });
+
+    // Transform users to include id field (from _id) and actual wallet balance
+    const transformedUsers = users.map(user => {
+      const userObj = user.toObject();
+      const actualWalletBalance = walletMap.get(user._id.toString()) ?? userObj.walletBalance ?? 0;
+      return {
+        ...userObj,
+        id: user._id.toString(),
+        _id: user._id.toString(), // Keep _id as well for compatibility
+        walletBalance: actualWalletBalance // Use actual balance from Wallet model
+      };
+    });
 
     res.json({
       success: true,
@@ -1455,17 +1465,20 @@ router.post('/create-admin', async (req, res) => {
       });
     }
 
+    // Normalize email to lowercase
+    const normalizedEmail = (email || 'admin@lottery.com').toLowerCase().trim();
+
     // Create admin user
     const adminUser = await User.create({
       firstName: firstName || 'Admin',
       lastName: lastName || 'User',
-      email: email || 'admin@lottery.com',
+      email: normalizedEmail,
       password: password || 'admin123',
       phone: '+1234567890',
       selectedLottery: 'powerball',
       trialStartDate: new Date(),
       trialEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-      isInTrial: false,
+      isPhoneVerified: true, // Admin users don't need phone verification
       walletBalance: 1000,
       role: 'admin',
       notificationsEnabled: true

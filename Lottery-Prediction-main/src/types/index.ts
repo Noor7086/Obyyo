@@ -17,6 +17,7 @@ export interface User {
   transactionCount: number;
   role: 'user' | 'admin';
   notificationsEnabled: boolean;
+  predictionNotificationsEnabled: boolean;
   isPhoneVerified: boolean;
   isActive?: boolean; // User active/inactive status
   createdAt?: string; // Account creation date
@@ -164,6 +165,7 @@ export interface ProfileUpdateForm {
   phone: string;
   selectedLottery: string;
   notificationsEnabled: boolean;
+  predictionNotificationsEnabled?: boolean;
 }
 
 export interface PasswordChangeForm {
