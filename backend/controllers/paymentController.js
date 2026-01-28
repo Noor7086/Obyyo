@@ -400,15 +400,38 @@ export const getAdminPayments = async (req, res, next) => {
       }
     }
 
-    // Sort by date descending
-    combinedPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Sort by date descending (ensure dates are valid)
+    combinedPayments.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA; // Descending order (newest first)
+    });
 
     // Handle Search for the combined list if it wasn't strictly handled before
-    // (We did partial filtering above, but robust search across combined list is best done here if list is small)
-    // Assuming default pagination limits, let's paginate the *combined* list manually
+    // Apply search filter to combined list (for wallet transactions that weren't filtered earlier)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      combinedPayments = combinedPayments.filter(payment => {
+        return (
+          (payment.userName && payment.userName.toLowerCase().includes(searchLower)) ||
+          (payment.userEmail && payment.userEmail.toLowerCase().includes(searchLower)) ||
+          (payment.transactionId && payment.transactionId.toLowerCase().includes(searchLower)) ||
+          (payment.lotteryDisplayName && payment.lotteryDisplayName.toLowerCase().includes(searchLower))
+        );
+      });
+    }
 
+    // Calculate total before pagination
     const combinedTotal = combinedPayments.length;
-    const pagedPayments = combinedPayments.slice((parseInt(page) - 1) * (parseInt(limit) || 20), parseInt(page) * (parseInt(limit) || 20));
+    
+    // Paginate the combined list
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const pagedPayments = combinedPayments.slice(startIndex, endIndex);
+    
+    console.log(`📄 Pagination: page=${pageNum}, limit=${limitNum}, total=${combinedTotal}, showing ${pagedPayments.length} items (indices ${startIndex}-${endIndex - 1})`);
 
     // Calculate statistics
     // Calculate statistics

@@ -1,5 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { predictionService } from '../../services/predictionService';
+
+type ExcludedNumbers = { main: number[]; bonus: number[] };
+type ExcludedByLottery = Record<string, ExcludedNumbers>;
 
 const NumberGenerator: React.FC = () => {
   const { user } = useAuth();
@@ -8,6 +12,7 @@ const NumberGenerator: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [numberOfCombinations, setNumberOfCombinations] = useState(5);
   const generateSectionRef = useRef<HTMLDivElement>(null);
+  const [excludedByLottery, setExcludedByLottery] = useState<ExcludedByLottery>({});
 
 
   const lotteryCategories = [
@@ -84,38 +89,71 @@ const NumberGenerator: React.FC = () => {
     }
   ];
 
-  const nonViableNumbers = {
-    powerball: {
-      main: [1, 3, 7, 12, 15, 18, 22, 25, 28, 31, 34, 37, 40, 43, 46, 49, 52, 55, 58, 61, 64, 67],
-      bonus: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25]
-    },
-    megamillion: {
-      main: [2, 4, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 44, 47, 50, 53, 56, 59, 62, 65, 68],
-      bonus: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25]
-    },
-    lottoamerica: {
-      main: [1, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51],
-      bonus: [1, 3, 5, 7, 9]
-    },
-    gopher5: {
-      main: [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46],
-      bonus: []
-    },
-    pick3: {
-      main: [0, 2, 4, 6, 8],
-      bonus: []
+  const normalizeExcludedNumbers = (lotteryId: string, apiValue: any): ExcludedNumbers => {
+    const toNums = (arr: any): number[] =>
+      (Array.isArray(arr) ? arr : [])
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n));
+
+    if (lotteryId === 'powerball' || lotteryId === 'megamillion' || lotteryId === 'lottoamerica') {
+      return {
+        main: toNums(apiValue?.whiteBalls),
+        bonus: toNums(apiValue?.redBalls)
+      };
+    }
+
+    // Single pool lotteries (gopher5, pick3, etc.)
+    return { main: toNums(apiValue), bonus: [] };
+  };
+
+  const fetchExcludedNumbersForLottery = async (lotteryId: string) => {
+    try {
+      // Use the nearest upcoming active prediction as the source of truth
+      const predictions = await predictionService.getPredictions(lotteryId as any, 1, 1);
+      const first = predictions?.[0];
+
+      // Backend currently returns admin-entered non-viable numbers inside `viableNumbers`
+      // (historical naming). We treat that as the EXCLUDED set here.
+      const excluded = normalizeExcludedNumbers(lotteryId, (first as any)?.viableNumbers);
+
+      setExcludedByLottery((prev) => ({ ...prev, [lotteryId]: excluded }));
+    } catch (e) {
+      // If fetch fails, default to no exclusions (full range)
+      setExcludedByLottery((prev) => ({ ...prev, [lotteryId]: { main: [], bonus: [] } }));
+    } finally {
+      // no-op
     }
   };
 
+  useEffect(() => {
+    // Fetch exclusions for selected lottery (and cache)
+    if (!excludedByLottery[selectedLottery]) {
+      fetchExcludedNumbersForLottery(selectedLottery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLottery]);
+
+  useEffect(() => {
+    // Prefetch exclusions for all supported lotteries (small list)
+    lotteryTypes.forEach((l) => {
+      if (!excludedByLottery[l.id]) {
+        fetchExcludedNumbersForLottery(l.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const generateViableNumbers = (lotteryId: string) => {
     const lottery = lotteryTypes.find(l => l.id === lotteryId);
-    const nonViable = nonViableNumbers[lotteryId as keyof typeof nonViableNumbers];
+    const excluded = excludedByLottery[lotteryId] || { main: [], bonus: [] };
     
     if (!lottery) return { main: [], bonus: [] };
 
-    const mainViable = [];
-    for (let i = 1; i <= lottery.mainNumbers; i++) {
-      if (!nonViable.main.includes(i)) {
+    const mainViable: number[] = [];
+    const mainStart = lotteryId === 'pick3' ? 0 : 1;
+    const mainEnd = lotteryId === 'pick3' ? 9 : lottery.mainNumbers;
+    for (let i = mainStart; i <= mainEnd; i++) {
+      if (!excluded.main.includes(i)) {
         mainViable.push(i);
       }
     }
@@ -123,7 +161,7 @@ const NumberGenerator: React.FC = () => {
     const bonusViable: number[] = [];
     if (lottery.bonusNumbers > 0) {
       for (let i = 1; i <= lottery.bonusNumbers; i++) {
-        if (!(nonViable.bonus as number[]).includes(i)) {
+        if (!excluded.bonus.includes(i)) {
           bonusViable.push(i);
         }
       }
@@ -140,23 +178,45 @@ const NumberGenerator: React.FC = () => {
       const viableNumbers = generateViableNumbers(selectedLottery);
       const combinations = [];
 
+      if (!lottery) {
+        setLoading(false);
+        return;
+      }
+
+      // Safety: if exclusions make generation impossible for unique-pick lotteries
+      const isPick3 = selectedLottery === 'pick3';
+      if (viableNumbers.main.length === 0) {
+        setGeneratedNumbers(null);
+        setLoading(false);
+        return;
+      }
+      if (!isPick3 && viableNumbers.main.length < lottery.pickCount) {
+        setGeneratedNumbers(null);
+        setLoading(false);
+        return;
+      }
+
       for (let i = 0; i < numberOfCombinations; i++) {
-        const mainNumbers = [];
-        const usedNumbers = new Set();
+        const mainNumbers: number[] = [];
 
-        // Generate main numbers
-        while (mainNumbers.length < lottery!.pickCount) {
-          const randomIndex = Math.floor(Math.random() * viableNumbers.main.length);
-          const number = viableNumbers.main[randomIndex];
-          
-          if (!usedNumbers.has(number)) {
-            mainNumbers.push(number);
-            usedNumbers.add(number);
+        if (isPick3) {
+          // Pick3 allows repeating digits; keep order
+          for (let j = 0; j < lottery.pickCount; j++) {
+            const randomIndex = Math.floor(Math.random() * viableNumbers.main.length);
+            mainNumbers.push(viableNumbers.main[randomIndex]);
           }
+        } else {
+          const usedNumbers = new Set<number>();
+          while (mainNumbers.length < lottery.pickCount) {
+            const randomIndex = Math.floor(Math.random() * viableNumbers.main.length);
+            const number = viableNumbers.main[randomIndex];
+            if (!usedNumbers.has(number)) {
+              mainNumbers.push(number);
+              usedNumbers.add(number);
+            }
+          }
+          mainNumbers.sort((a, b) => a - b);
         }
-
-        // Sort main numbers
-        mainNumbers.sort((a, b) => a - b);
 
         // Generate bonus number if needed
         let bonusNumber = null;
@@ -196,7 +256,10 @@ const NumberGenerator: React.FC = () => {
     }, 100);
   };
 
-  const selectedLotteryData = lotteryTypes.find(lottery => lottery.id === selectedLottery);
+  const selectedLotteryData = useMemo(
+    () => lotteryTypes.find(lottery => lottery.id === selectedLottery),
+    [lotteryTypes, selectedLottery]
+  );
 
   return (
     <div className="container py-5 mt-5">

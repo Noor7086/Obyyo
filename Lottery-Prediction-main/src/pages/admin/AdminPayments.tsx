@@ -47,19 +47,13 @@ interface ApiResponse {
 const AdminPayments: React.FC = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [filterLottery, setFilterLottery] = useState<LotteryType | 'all' | 'wallet'>('all');
 
   useEffect(() => {
-    setCurrentPage(1); // Reset to first page when filter changes
-  }, [filterLottery]);
-
-  useEffect(() => {
     fetchPayments();
-  }, [currentPage, filterLottery]);
+  }, [filterLottery]);
 
   const fetchPayments = async () => {
     try {
@@ -76,16 +70,24 @@ const AdminPayments: React.FC = () => {
 
       console.log('📤 Fetching payments from /admin/payments');
       const lotteryParam = filterLottery !== 'all' ? `&lottery=${filterLottery}` : '';
-      const response = await apiService.get<ApiResponse>(`/admin/payments?page=${currentPage}&limit=20${lotteryParam}`);
+      // Fetch all payments (use a very large limit to get all results)
+      const response = await apiService.get<ApiResponse>(`/admin/payments?page=1&limit=10000${lotteryParam}`);
       console.log('✅ Payments response:', response);
 
       if (response.success && response.data) {
-        setPurchases(response.data.purchases || []);
-        setTotalPages(response.data.pagination?.pages || 1);
-        setTotalPurchases(response.data.pagination?.total || 0);
+        const purchases = response.data.purchases || [];
+        const pagination = response.data.pagination || {};
+        
+        console.log('📄 Payments data:', {
+          purchasesCount: purchases.length,
+          total: pagination.total
+        });
+        
+        setPurchases(purchases);
+        setTotalPurchases(pagination.total || purchases.length);
         setStatistics(response.data.statistics || null);
 
-        if (!response.data.purchases || response.data.purchases.length === 0) {
+        if (purchases.length === 0) {
           console.log('No purchases found - this is expected if no one has purchased predictions yet');
         }
       } else {
@@ -325,63 +327,6 @@ const AdminPayments: React.FC = () => {
               </div>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <nav aria-label="Payments pagination" className="mt-4">
-                <ul className="pagination justify-content-center">
-                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                    <button
-                      className="page-link"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </button>
-                  </li>
-                  {[...Array(totalPages)].map((_, index) => {
-                    const page = index + 1;
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <li
-                          key={page}
-                          className={`page-item ${currentPage === page ? 'active' : ''}`}
-                        >
-                          <button
-                            className="page-link"
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </button>
-                        </li>
-                      );
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
-                      return (
-                        <li key={page} className="page-item disabled">
-                          <span className="page-link">...</span>
-                        </li>
-                      );
-                    }
-                    return null;
-                  })}
-                  <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                    <button
-                      className="page-link"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </li>
-                </ul>
-              </nav>
-            )}
           </>
         )}
       </div>

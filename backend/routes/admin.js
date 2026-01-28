@@ -1230,6 +1230,13 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
       case '1y':
         startDate.setFullYear(now.getFullYear() - 1);
         break;
+      case 'alltime':
+      case 'all':
+        // For all time, set start date to a very old date (e.g., 10 years ago)
+        startDate.setFullYear(now.getFullYear() - 10);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 30); // Default to 30 days
     }
 
     // Get user growth data
@@ -1252,10 +1259,11 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
       }
     ]);
 
-    // Get revenue data - filter by lotteryType if provided
-    let revenueData;
+    // Get prediction purchase revenue (all completed purchases for real predictions)
+    // This uses ONLY the Purchase model
+    let purchaseRevenueData;
     if (lotteryType && lotteryType !== 'all') {
-      revenueData = await Purchase.aggregate([
+      purchaseRevenueData = await Purchase.aggregate([
         {
           $match: {
             paymentStatus: 'completed',
@@ -1270,9 +1278,7 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
             as: 'predictionData'
           }
         },
-        {
-          $unwind: '$predictionData'
-        },
+        { $unwind: '$predictionData' },
         {
           $match: {
             'predictionData.lotteryType': lotteryType.toLowerCase()
@@ -1286,12 +1292,10 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
             amount: { $sum: '$amount' }
           }
         },
-        {
-          $sort: { _id: 1 }
-        }
+        { $sort: { _id: 1 } }
       ]);
     } else {
-      revenueData = await Purchase.aggregate([
+      purchaseRevenueData = await Purchase.aggregate([
         {
           $match: {
             paymentStatus: 'completed',
@@ -1306,11 +1310,84 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
             amount: { $sum: '$amount' }
           }
         },
-        {
-          $sort: { _id: 1 }
-        }
+        { $sort: { _id: 1 } }
       ]);
     }
+
+    // Get wallet deposit revenue from Wallet model (credits)
+    // This shows total money ADDED to wallets (top-ups/deposits)
+    // Match the same logic as paymentController - get ALL completed credit transactions
+    const walletRevenueData = await Wallet.aggregate([
+      { $unwind: '$transactions' },
+      {
+        $match: {
+          'transactions.type': 'credit',
+          'transactions.status': 'completed',
+          'transactions.createdAt': { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$transactions.createdAt' }
+          },
+          amount: { $sum: '$transactions.amount' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Also get total wallet deposits (all time, no date filter) to match payments table
+    const totalWalletDepositsAllTime = await Wallet.aggregate([
+      { $unwind: '$transactions' },
+      {
+        $match: {
+          'transactions.type': 'credit',
+          'transactions.status': 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$transactions.amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Log wallet deposit data for debugging
+    console.log('📊 Wallet Deposit Revenue Summary:');
+    console.log('Total wallet deposits (credits) in range:', walletRevenueData.length, 'days with deposits');
+    const totalWalletDepositsInRange = walletRevenueData.reduce((sum, item) => sum + item.amount, 0);
+    console.log('Total amount added to wallets (in range):', totalWalletDepositsInRange);
+    console.log('Total amount added to wallets (ALL TIME):', totalWalletDepositsAllTime[0]?.total || 0, 'from', totalWalletDepositsAllTime[0]?.count || 0, 'transactions');
+    if (walletRevenueData.length > 0) {
+      console.log('Sample wallet deposit data:', walletRevenueData.slice(0, 3));
+    }
+
+    // Combine both for total revenue (backward compatibility)
+    const revenueDataMap = new Map();
+    
+    // Add purchase revenue
+    purchaseRevenueData.forEach(item => {
+      revenueDataMap.set(item._id, { date: item._id, purchaseAmount: item.amount, walletAmount: 0 });
+    });
+    
+    // Add wallet revenue
+    walletRevenueData.forEach(item => {
+      const existing = revenueDataMap.get(item._id);
+      if (existing) {
+        existing.walletAmount = item.amount;
+      } else {
+        revenueDataMap.set(item._id, { date: item._id, purchaseAmount: 0, walletAmount: item.amount });
+      }
+    });
+    
+    // Convert to array with combined total
+    const revenueData = Array.from(revenueDataMap.values()).map(item => ({
+      date: item.date,
+      amount: item.purchaseAmount + item.walletAmount
+    }));
 
     // Get prediction stats by lottery type - filter by lotteryType if provided
     let predictionStats;
@@ -1410,6 +1487,13 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
       }
     ]);
 
+    // Log the data for debugging
+    console.log('📊 Analytics Data Summary:');
+    console.log('Purchase Revenue Data:', purchaseRevenueData.length, 'records');
+    console.log('Wallet Revenue Data:', walletRevenueData.length, 'records');
+    console.log('Sample Purchase Revenue:', purchaseRevenueData.slice(0, 3));
+    console.log('Sample Wallet Revenue:', walletRevenueData.slice(0, 3));
+
     res.json({
       success: true,
       data: {
@@ -1418,9 +1502,19 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
           count: item.count
         })),
         revenueData: revenueData.map(item => ({
+          date: item.date,
+          amount: item.amount
+        })),
+        purchaseRevenueData: purchaseRevenueData.map(item => ({
           date: item._id,
           amount: item.amount
         })),
+        walletRevenueData: walletRevenueData.map(item => ({
+          date: item._id,
+          amount: item.amount
+        })),
+        // Add total wallet deposits (all time) to match payments table
+        totalWalletDeposits: totalWalletDepositsAllTime[0]?.total || 0,
         predictionStats: predictionStats.map(item => ({
           lotteryType: item._id,
           count: item.count,

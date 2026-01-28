@@ -5527,7 +5527,6 @@ html {
 /* Main Content */
 .dashboard-main {
   flex: 1;
-  margin-top: 60px;
   padding: 2rem;
   min-height: calc(100vh - 60px);
   transition: margin-left 0.3s ease;
@@ -5808,7 +5807,8 @@ html {
 }
 
 .revenue-chart {
-  height: 200px;
+  min-height: 280px;
+  width: 100%;
   background: var(--gray-50);
   border-radius: var(--radius-lg);
   display: flex;
