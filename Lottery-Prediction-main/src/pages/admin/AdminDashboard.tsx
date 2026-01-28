@@ -96,16 +96,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const getCurrentRevenue = (): number => {
-    if (selectedLottery === 'all') {
-      return stats?.totalRevenue || 0;
-    }
-    const lotteryStats = analytics?.predictionStats?.find(
-      stat => stat.lotteryType.toLowerCase() === selectedLottery.toLowerCase()
-    );
-    return lotteryStats?.revenue || 0;
-  };
-
   const getCurrentPurchases = (): number => {
     if (selectedLottery === 'all') {
       return stats?.totalPurchases || 0;
@@ -114,14 +104,6 @@ const AdminDashboard: React.FC = () => {
       stat => stat.lotteryType.toLowerCase() === selectedLottery.toLowerCase()
     );
     return lotteryStats?.count || 0;
-  };
-
-  const calculateRevenueTrend = (): string => {
-    if (!analytics?.revenueData || analytics.revenueData.length < 2) return '0';
-    const current = analytics.revenueData[analytics.revenueData.length - 1]?.amount || 0;
-    const previous = analytics.revenueData[analytics.revenueData.length - 2]?.amount || 0;
-    if (previous === 0) return '0';
-    return ((current - previous) / previous * 100).toFixed(1);
   };
 
   const calculatePurchaseRevenueTrend = (): string => {
@@ -681,7 +663,10 @@ const AdminDashboard: React.FC = () => {
                               marginBottom: '10px',
                               fontSize: isMobile ? '10px' : '12px'
                             }}
-                            formatter={(value: number) => [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue']}
+                            formatter={(value: number | undefined) => {
+                              const val = value ?? 0;
+                              return [`$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue'];
+                            }}
                             cursor={{ stroke: '#10b981', strokeWidth: 2, strokeDasharray: '5 5' }}
                           />
                           <Line 
@@ -839,7 +824,10 @@ const AdminDashboard: React.FC = () => {
                               marginBottom: '10px',
                               fontSize: isMobile ? '10px' : '12px'
                             }}
-                            formatter={(value: number) => [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue']}
+                            formatter={(value: number | undefined) => {
+                              const val = value ?? 0;
+                              return [`$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue'];
+                            }}
                             cursor={{ stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5 5' }}
                           />
                           <Line 
