@@ -287,10 +287,10 @@ const AdminPredictions: React.FC = () => {
       }
       const predAny = pred as any;
       doc.setFontSize(11);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text(`${idx + 1}. ${pred.lotteryDisplayName || pred.lotteryType}`, margin, y);
       y += lineH;
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.text(`Draw: ${new Date(pred.drawDate).toLocaleDateString()} ${pred.drawTime || ''}`, margin, y);
       y += lineH;
