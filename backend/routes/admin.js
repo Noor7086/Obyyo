@@ -299,6 +299,42 @@ router.post('/predictions', protect, authorize('admin'), validatePredictionUploa
   }
 });
 
+// @route   GET /api/admin/predictions/export
+// @desc    Get all predictions for admin export (PDF etc.) - no pagination limit
+// @access  Private/Admin
+const EXPORT_MAX_LIMIT = 5000;
+router.get('/predictions/export', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { lotteryType } = req.query;
+    let query = {};
+    if (lotteryType && lotteryType !== 'all') {
+      query = { lotteryType };
+    }
+    const predictions = await Prediction.find(query)
+      .populate('uploadedBy', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .limit(EXPORT_MAX_LIMIT)
+      .lean();
+    const transformedPredictions = predictions.map(prediction => ({
+      ...prediction,
+      id: prediction._id.toString(),
+      _id: prediction._id.toString()
+    }));
+    res.json({
+      success: true,
+      data: {
+        predictions: transformedPredictions
+      }
+    });
+  } catch (error) {
+    console.error('Admin predictions export error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/admin/predictions
 // @desc    Get all predictions for admin
 // @access  Private/Admin

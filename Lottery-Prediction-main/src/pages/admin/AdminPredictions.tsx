@@ -3,6 +3,7 @@ import { Prediction, LotteryType } from '../../types';
 import { apiService } from '../../services/api';
 import AdminLayout from '../../components/layout/AdminLayout';
 import toast from 'react-hot-toast';
+import { jsPDF } from 'jspdf';
 
 const AdminPredictions: React.FC = () => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -25,6 +26,8 @@ const AdminPredictions: React.FC = () => {
   const [loadingResults, setLoadingResults] = useState(false);
   const [showEditResultModal, setShowEditResultModal] = useState(false);
   const [editingResult, setEditingResult] = useState<any | null>(null);
+  const [selectedPredictionIds, setSelectedPredictionIds] = useState<string[]>([]);
+  const [exportPdfLoading, setExportPdfLoading] = useState(false);
   const [resultData, setResultData] = useState({
     drawDate: new Date().toISOString().split('T')[0],
     winningNumbers: {
@@ -232,6 +235,161 @@ const AdminPredictions: React.FC = () => {
       setError(err.message || 'Failed to fetch predictions');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPredictionsForExport = async (lotteryType?: LotteryType | 'all'): Promise<Prediction[]> => {
+    const params = new URLSearchParams();
+    if (lotteryType && lotteryType !== 'all') params.set('lotteryType', lotteryType);
+    const response = await apiService.get(`/admin/predictions/export${params.toString() ? `?${params}` : ''}`);
+    if (!(response as any).success) return [];
+    return (response as any).data.predictions || [];
+  };
+
+  const formatPredictionNumbers = (pred: any): string => {
+    const lt = (pred.lotteryType || '').toLowerCase();
+    if (lt === 'powerball' || lt === 'megamillion' || lt === 'lottoamerica') {
+      const w = pred.nonViableNumbers?.whiteBalls || pred.viableNumbers?.whiteBalls || [];
+      const r = pred.nonViableNumbers?.redBalls || pred.viableNumbers?.redBalls || [];
+      const wStr = Array.isArray(w) ? w.join(', ') : '';
+      const rStr = Array.isArray(r) ? r.join(', ') : '';
+      return `White: ${wStr || '—'} | Red: ${rStr || '—'}`;
+    }
+    if (lt === 'gopher5') {
+      const arr = pred.nonViableNumbersSingle || pred.viableNumbersSingle || [];
+      return Array.isArray(arr) ? arr.join(', ') || '—' : '—';
+    }
+    if (lt === 'pick3') {
+      const arr = pred.nonViableNumbersPick3 || pred.viableNumbersPick3 || [];
+      return Array.isArray(arr) ? arr.join(', ') || '—' : '—';
+    }
+    return '—';
+  };
+
+  const generatePredictionPDF = (list: Prediction[], filename: string) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 18;
+    const lineH = 7;
+    const margin = 14;
+
+    doc.setFontSize(16);
+    doc.text('Prediction Export', margin, y);
+    y += lineH + 2;
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total: ${list.length} prediction(s)`, margin, y);
+    y += lineH + 4;
+
+    list.forEach((pred, idx) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 18;
+      }
+      const predAny = pred as any;
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${idx + 1}. ${pred.lotteryDisplayName || pred.lotteryType}`, margin, y);
+      y += lineH;
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      doc.text(`Draw: ${new Date(pred.drawDate).toLocaleDateString()} ${pred.drawTime || ''}`, margin, y);
+      y += lineH;
+      doc.text(`Price: $${typeof pred.price === 'number' ? pred.price.toFixed(2) : pred.price}`, margin, y);
+      y += lineH;
+      const numbersText = formatPredictionNumbers(predAny);
+      const split = doc.splitTextToSize(`Numbers: ${numbersText}`, pageW - 2 * margin);
+      doc.text(split, margin, y);
+      y += lineH * split.length;
+      if (pred.notes) {
+        const notesSplit = doc.splitTextToSize(`Notes: ${pred.notes}`, pageW - 2 * margin);
+        doc.text(notesSplit, margin, y);
+        y += lineH * notesSplit.length;
+      }
+      y += 4;
+    });
+
+    doc.save(filename);
+  };
+
+  const handleExportPdf = async (mode: 'selected' | 'lottery' | 'all') => {
+    setExportPdfLoading(true);
+    try {
+      let list: Prediction[] = [];
+      let filename = `predictions-export-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      if (mode === 'selected') {
+        if (selectedPredictionIds.length === 0) {
+          toast.error('Select at least one prediction to export.');
+          setExportPdfLoading(false);
+          return;
+        }
+        list = predictions.filter((p) => {
+          const id = p.id || (p as any)._id;
+          return id && selectedPredictionIds.includes(id);
+        });
+        filename = `predictions-selected-${new Date().toISOString().split('T')[0]}.pdf`;
+      } else if (mode === 'lottery') {
+        const lottery = filterLottery !== 'all' ? filterLottery : undefined;
+        if (!lottery) {
+          toast.error('Choose a lottery filter (e.g. Pick 3) or use "Export all".');
+          setExportPdfLoading(false);
+          return;
+        }
+        list = await fetchPredictionsForExport(lottery);
+        const label = lotteryTypes.find((lt) => lt.value === lottery)?.label || lottery;
+        filename = `predictions-${lottery}-all-${new Date().toISOString().split('T')[0]}.pdf`;
+        toast.success(`Exported ${list.length} ${label} prediction(s).`);
+      } else {
+        list = await fetchPredictionsForExport('all');
+        toast.success(`Exported ${list.length} prediction(s).`);
+      }
+
+      if (list.length === 0) {
+        toast.error('No predictions to export.');
+        setExportPdfLoading(false);
+        return;
+      }
+      generatePredictionPDF(list, filename);
+    } catch (e: any) {
+      toast.error(e?.message || 'Export failed.');
+    } finally {
+      setExportPdfLoading(false);
+    }
+  };
+
+  const handleExportPdfByLottery = async (lotteryType: LotteryType) => {
+    setExportPdfLoading(true);
+    try {
+      const list = await fetchPredictionsForExport(lotteryType);
+      const label = lotteryTypes.find((lt) => lt.value === lotteryType)?.label || lotteryType;
+      const filename = `predictions-${lotteryType}-all-${new Date().toISOString().split('T')[0]}.pdf`;
+      if (list.length === 0) {
+        toast.error(`No ${label} predictions to export.`);
+        setExportPdfLoading(false);
+        return;
+      }
+      generatePredictionPDF(list, filename);
+      toast.success(`Exported ${list.length} ${label} prediction(s).`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Export failed.');
+    } finally {
+      setExportPdfLoading(false);
+    }
+  };
+
+  const toggleSelectPrediction = (id: string) => {
+    setSelectedPredictionIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllOnPage = () => {
+    const ids = predictions.map((p) => p.id || (p as any)._id).filter(Boolean) as string[];
+    const allSelected = ids.length > 0 && ids.every((id) => selectedPredictionIds.includes(id));
+    if (allSelected) {
+      setSelectedPredictionIds((prev) => prev.filter((id) => !ids.includes(id)));
+    } else {
+      setSelectedPredictionIds((prev) => [...new Set([...prev, ...ids])]);
     }
   };
 
@@ -880,7 +1038,7 @@ const AdminPredictions: React.FC = () => {
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h1 className="h3 mb-0">Prediction Management</h1>
-            <div>
+            <div className="d-flex align-items-center gap-2">
               <button 
                 className="btn btn-success me-2" 
                 onClick={() => setShowCreateModal(true)}
@@ -888,6 +1046,65 @@ const AdminPredictions: React.FC = () => {
                 <i className="bi bi-plus-circle me-2"></i>
                 Add Prediction
               </button>
+              <div className="dropdown me-2">
+                <button
+                  className="btn btn-danger dropdown-toggle"
+                  type="button"
+                  id="exportPdfDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  disabled={exportPdfLoading}
+                >
+                  {exportPdfLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-file-pdf me-2"></i>
+                      Export PDF
+                    </>
+                  )}
+                </button>
+                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="exportPdfDropdown">
+                  <li>
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => handleExportPdf('selected')}
+                    >
+                      <i className="bi bi-check2-square me-2"></i>
+                      Download selected ({selectedPredictionIds.length})
+                    </button>
+                  </li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li><h6 className="dropdown-header">Download all for one lottery</h6></li>
+                  {lotteryTypes.map((lt) => (
+                    <li key={lt.value}>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => handleExportPdfByLottery(lt.value)}
+                      >
+                        <i className="bi bi-collection me-2"></i>
+                        All {lt.label}
+                      </button>
+                    </li>
+                  ))}
+                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => handleExportPdf('all')}
+                    >
+                      <i className="bi bi-download me-2"></i>
+                      Download all predictions
+                    </button>
+                  </li>
+                </ul>
+              </div>
               <button className="btn btn-outline-primary" onClick={fetchPredictions}>
                 <i className="bi bi-arrow-clockwise me-2"></i>
                 Refresh
@@ -979,6 +1196,15 @@ const AdminPredictions: React.FC = () => {
                 <table className="table table-bordered" width="100%" cellSpacing="0">
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={predictions.length > 0 && predictions.every((p) => selectedPredictionIds.includes(p.id || (p as any)._id))}
+                          onChange={toggleSelectAllOnPage}
+                          aria-label="Select all on page"
+                        />
+                      </th>
                       <th>Lottery</th>
                       <th>Draw Date</th>
                       <th>Price</th>
@@ -991,8 +1217,19 @@ const AdminPredictions: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {predictions.map((prediction) => (
-                      <tr key={prediction.id}>
+                    {predictions.map((prediction) => {
+                      const predId = prediction.id || (prediction as any)._id || (prediction as any).predictionId;
+                      return (
+                      <tr key={predId}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={predId ? selectedPredictionIds.includes(predId) : false}
+                            onChange={() => predId && toggleSelectPrediction(predId)}
+                            aria-label={`Select ${prediction.lotteryDisplayName}`}
+                          />
+                        </td>
                         <td>
                           <div>
                             <strong>{prediction.lotteryDisplayName}</strong>
@@ -1169,7 +1406,8 @@ const AdminPredictions: React.FC = () => {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
