@@ -6,7 +6,6 @@ import { predictionService } from '../services/predictionService';
 import { lotteryService } from '../services/lotteryService';
 import { Prediction, LotteryType, Lottery } from '../types';
 import { Modal, Button } from 'react-bootstrap';
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import toast from 'react-hot-toast';
 
 const Predictions: React.FC = () => {
@@ -655,76 +654,6 @@ const Predictions: React.FC = () => {
     }
   };
 
-
-  const handlePayPalPayment = async () => {
-    if (!selectedPrediction) return;
-
-    // Check if user acknowledged the disclaimer
-    if (!acknowledgeDisclaimer) {
-      toast.error('Please acknowledge the disclaimer before purchasing.');
-      setPaymentLoading(false);
-      return;
-    }
-
-    setPaymentLoading(true);
-    try {
-      await predictionService.purchasePrediction(
-        selectedPrediction.lotteryType,
-        selectedPrediction.id,
-        'paypal'
-      );
-
-      // Refresh user data
-      await refreshUser();
-
-      // Small delay to ensure purchase is committed to database
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Fetch full prediction details after purchase
-      setLoadingPredictionDetails(true);
-      try {
-        const fullPrediction = await predictionService.getPredictionDetails(
-          selectedPrediction.lotteryType,
-          selectedPrediction.id
-        );
-
-        setPurchasedPrediction(fullPrediction);
-
-        // Add to purchased set so it shows View button
-        if (selectedPrediction) {
-          setPurchasedPredictionIds(prev => new Set(prev).add(selectedPrediction.id));
-        }
-
-        // Close payment modal and open prediction view modal
-        setShowPaymentModal(false);
-        setShowPredictionModal(true);
-        setSelectedPrediction(null);
-
-        toast.success('Prediction purchased successfully!');
-        // Trigger wallet balance update event
-        window.dispatchEvent(new Event('walletBalanceUpdated'));
-      } catch (detailsError: any) {
-        console.error('Error fetching prediction details:', detailsError);
-        // If we can't fetch details, show a message but still close payment modal
-        setShowPaymentModal(false);
-        // Still add to purchased set even if details fetch failed
-        if (selectedPrediction) {
-          setPurchasedPredictionIds(prev => new Set(prev).add(selectedPrediction.id));
-        }
-        toast.error('Purchase successful, but failed to load prediction details. Please refresh and try viewing from "My Predictions".');
-      }
-
-      // Refresh predictions list
-      await fetchPredictions();
-    } catch (error: any) {
-      console.error('PayPal payment failed:', error);
-      toast.error(error.message || 'Payment failed. Please try again.');
-    } finally {
-      setPaymentLoading(false);
-      setLoadingPredictionDetails(false);
-    }
-  };
-
   // Helper function to calculate viable numbers from non-viable numbers
   const calculateViableFromNonViable = (lotteryType: LotteryType, nonViableMain: number[], nonViableBonus: number[] = []): any => {
     // NOTE: User requested to show "Non Viable Numbers" in the UI section labeled "Non Viable"
@@ -1248,161 +1177,118 @@ const Predictions: React.FC = () => {
       </div>
 
       {/* Payment Modal */}
-      <Modal show={showPaymentModal} onHide={() => setShowPaymentModal(false)} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>
-            <i className="bi bi-credit-card me-2"></i>
+      <Modal
+        show={showPaymentModal}
+        onHide={() => setShowPaymentModal(false)}
+        centered
+        size="lg"
+        className="purchase-modal"
+      >
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold d-flex align-items-center">
+            <span className="rounded-circle bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center me-2" style={{ width: 40, height: 40 }}>
+              <i className="bi bi-wallet2"></i>
+            </span>
             Purchase Prediction
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="pt-2 pb-4">
           {selectedPrediction && (
-            <div className="mb-4">
-              <div className="text-center mb-3">
-                <h5>{selectedPrediction.lotteryDisplayName}</h5>
-                <p className="text-muted mb-1">
-                  Draw Date: <strong>{new Date(selectedPrediction.drawDate).toLocaleDateString()} at {selectedPrediction.drawTime}</strong>
-                </p>
-                <p className="text-muted">Amount: <strong className="fs-5">${selectedPrediction.price ? selectedPrediction.price.toFixed(2) : '0.00'}</strong></p>
-              </div>
-
-              {user && (
-                <div className="alert alert-info mb-3">
-                  <p className="mb-1">
-                    <strong>Wallet Balance:</strong> ${user.walletBalance.toFixed(2)}
-                  </p>
-                  {selectedPrediction.price && user.walletBalance < selectedPrediction.price && (
-                    <p className="mb-0 text-danger">
-                      <i className="bi bi-exclamation-triangle me-1"></i>
-                      Insufficient balance - <a href="/wallet" className="alert-link">Add funds</a>
+            <>
+              {/* Order summary card */}
+              <div className="rounded-3 border bg-light bg-opacity-50 p-4 mb-4">
+                <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                  <div>
+                    <h5 className="fw-bold mb-1">{selectedPrediction.lotteryDisplayName}</h5>
+                    <p className="text-muted small mb-0">
+                      Draw: {new Date(selectedPrediction.drawDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at {selectedPrediction.drawTime}
                     </p>
-                  )}
+                  </div>
+                  <div className="text-end">
+                    <span className="text-muted small d-block">Total</span>
+                    <span className="fs-4 fw-bold text-primary">
+                      ${selectedPrediction.price ? selectedPrediction.price.toFixed(2) : '0.00'}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+                {user && (
+                  <div className="mt-3 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span className="text-muted small">
+                      <i className="bi bi-wallet2 me-1"></i>
+                      Your balance: <strong>${user.walletBalance.toFixed(2)}</strong>
+                    </span>
+                    {selectedPrediction.price && user.walletBalance < selectedPrediction.price ? (
+                      <a href="/wallet" className="btn btn-sm btn-outline-primary">
+                        Add funds
+                      </a>
+                    ) : (
+                      <span className="badge bg-success bg-opacity-10 text-success">
+                        <i className="bi bi-check-circle me-1"></i>Sufficient balance
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
 
-          {/* Disclaimer Warning */}
-          <div className="alert alert-warning border-warning mb-4">
-            <div className="d-flex align-items-start">
-              <i className="bi bi-exclamation-triangle-fill text-warning me-2 fs-5"></i>
-              <div className="flex-grow-1">
-                <h6 className="alert-heading mb-2">
-                  <strong>Important Disclaimer</strong>
+              {/* Disclaimer - compact */}
+              <div className="rounded-3 border border-warning border-opacity-50 bg-warning bg-opacity-10 p-3 mb-4">
+                <h6 className="fw-semibold text-dark mb-2 d-flex align-items-center">
+                  <i className="bi bi-info-circle text-warning me-2"></i>
+                  Important disclaimer
                 </h6>
-                <ul className="mb-2 ps-3">
-                  <li>Predictions are based on statistical analysis and are <strong>NOT 100% accurate</strong></li>
-                  <li>Lottery outcomes are random and cannot be guaranteed</li>
-                  <li>Past performance does not guarantee future results</li>
-                  <li>Use predictions at your own discretion and risk</li>
-                  <li>We are not responsible for any losses incurred from using our predictions</li>
+                <ul className="small text-muted mb-2 ps-3 mb-0" style={{ lineHeight: 1.6 }}>
+                  <li>Predictions are not 100% accurate; lottery outcomes are random.</li>
+                  <li>Use at your own discretion. We are not responsible for any losses.</li>
                 </ul>
-                <p className="mb-0 small">
-                  <strong>By purchasing, you acknowledge that you understand these limitations and agree to use the predictions responsibly.</strong>
-                </p>
               </div>
-            </div>
-          </div>
 
-          {/* Acknowledgment Checkbox */}
-          <div className="mb-4">
-            <div className="form-check">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="acknowledgeDisclaimer"
-                checked={acknowledgeDisclaimer}
-                onChange={(e) => setAcknowledgeDisclaimer(e.target.checked)}
-                disabled={paymentLoading}
-              />
-              <label className="form-check-label" htmlFor="acknowledgeDisclaimer">
-                <strong>I acknowledge and understand that predictions are not 100% accurate and outcomes cannot be guaranteed. I accept full responsibility for my purchase decision.</strong>
-              </label>
-            </div>
-          </div>
-
-          <div className="d-grid gap-3">
-            {/* Wallet Payment Option */}
-            <Button
-              variant="outline-primary"
-              size="lg"
-              onClick={handleWalletPayment}
-              disabled={paymentLoading || loadingPredictionDetails || !acknowledgeDisclaimer || (user && selectedPrediction && selectedPrediction.price ? user.walletBalance < selectedPrediction.price : false)}
-              className="d-flex align-items-center justify-content-center"
-            >
-              {paymentLoading || loadingPredictionDetails ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-wallet2 me-2"></i>
-                  Pay with Wallet
-                </>
-              )}
-            </Button>
-
-            {/* PayPal Payment Option */}
-            {(!user || user.walletBalance >= (selectedPrediction?.price || 0)) && acknowledgeDisclaimer ? (
-              <div className="paypal-container">
-                <PayPalScriptProvider
-                  options={{
-                    clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "", // Load from environment variable
-                    currency: "USD"
-                  }}
-                >
-                  <PayPalButtons
-                    createOrder={(_data, actions) => {
-                      if (!acknowledgeDisclaimer) {
-                        return Promise.reject('Please acknowledge the disclaimer first');
-                      }
-                      return actions.order.create({
-                        intent: "CAPTURE",
-                        purchase_units: [
-                          {
-                            amount: {
-                              value: selectedPrediction?.price?.toString() || "0",
-                              currency_code: "USD"
-                            },
-                            description: `Prediction for ${selectedPrediction?.lotteryDisplayName}`
-                          }
-                        ]
-                      });
-                    }}
-                    onApprove={(_data, actions) => {
-                      return actions.order!.capture().then((details) => {
-                        console.log('PayPal payment completed:', details);
-                        handlePayPalPayment();
-                      });
-                    }}
-                    onError={(err) => {
-                      console.error('PayPal error:', err);
-                      setPaymentLoading(false);
-                    }}
-                    style={{
-                      layout: 'vertical',
-                      color: 'blue',
-                      shape: 'rect',
-                      label: 'paypal'
-                    }}
+              {/* Acknowledgment */}
+              <div className="rounded-3 border p-3 mb-4 bg-white">
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="acknowledgeDisclaimer"
+                    checked={acknowledgeDisclaimer}
+                    onChange={(e) => setAcknowledgeDisclaimer(e.target.checked)}
+                    disabled={paymentLoading}
                   />
-                </PayPalScriptProvider>
+                  <label className="form-check-label small" htmlFor="acknowledgeDisclaimer">
+                    I acknowledge that predictions are not guaranteed and I accept full responsibility for this purchase.
+                  </label>
+                </div>
               </div>
-            ) : !acknowledgeDisclaimer ? (
-              <div className="alert alert-info text-center mb-0">
-                <i className="bi bi-info-circle me-2"></i>
-                Please acknowledge the disclaimer above to enable PayPal payment
-              </div>
-            ) : null}
-          </div>
+
+              {/* Pay button */}
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleWalletPayment}
+                disabled={paymentLoading || loadingPredictionDetails || !acknowledgeDisclaimer || (user && selectedPrediction && selectedPrediction.price ? user.walletBalance < selectedPrediction.price : false)}
+                className="w-100 d-flex align-items-center justify-content-center py-3 fw-semibold rounded-3"
+              >
+                {paymentLoading || loadingPredictionDetails ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-wallet2 me-2 fs-5"></i>
+                    Pay ${selectedPrediction.price ? selectedPrediction.price.toFixed(2) : '0.00'} with Wallet
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="border-0 pt-0">
           <Button
-            variant="secondary"
+            variant="link"
+            className="text-muted text-decoration-none"
             onClick={() => {
               setShowPaymentModal(false);
-              setAcknowledgeDisclaimer(false); // Reset checkbox when closing
+              setAcknowledgeDisclaimer(false);
             }}
             disabled={paymentLoading}
           >

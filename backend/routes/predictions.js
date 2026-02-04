@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getPredictions,
+  getLatestPrediction,
   getPredictionDetails,
   purchasePrediction,
   getMyPurchases,
@@ -46,6 +47,11 @@ router.get('/result/:id', protect, isVerified, validatePredictionId, getPredicti
 // @desc    Get trial predictions for user's selected lottery
 // @access  Private
 router.get('/trial/:lotteryType', protect, isVerified, validateLotteryType, getTrialPredictions);
+
+// @route   GET /api/predictions/latest/:lotteryType
+// @desc    Get latest uploaded prediction for a lottery (by createdAt) - for Number Generator
+// @access  Public (literal "latest" path avoids conflict with :lotteryType/:id)
+router.get('/latest/:lotteryType', validateLotteryType, getLatestPrediction);
 
 // @route   GET /api/predictions/:lotteryType/:id
 // @desc    Get specific prediction details

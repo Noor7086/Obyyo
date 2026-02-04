@@ -18,6 +18,7 @@ export interface User {
   role: 'user' | 'admin';
   notificationsEnabled: boolean;
   predictionNotificationsEnabled: boolean;
+  notificationLotteries?: LotteryType[];
   isPhoneVerified: boolean;
   isActive?: boolean; // User active/inactive status
   createdAt?: string; // Account creation date
@@ -166,6 +167,7 @@ export interface ProfileUpdateForm {
   selectedLottery: string;
   notificationsEnabled: boolean;
   predictionNotificationsEnabled?: boolean;
+  notificationLotteries?: LotteryType[];
 }
 
 export interface PasswordChangeForm {
@@ -254,7 +256,7 @@ export interface AuthContextType {
   login: (credentials: LoginForm) => Promise<{ user: User; token: string }>;
   register: (userData: RegisterForm) => Promise<void>;
   logout: (silent?: boolean) => void;
-  updateProfile: (data: ProfileUpdateForm) => Promise<void>;
+  updateProfile: (data: ProfileUpdateForm) => Promise<User>;
   changePassword: (data: PasswordChangeForm) => Promise<void>;
   refreshUser: () => Promise<void>;
   isTrialActive: () => boolean;

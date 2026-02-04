@@ -145,12 +145,6 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li className="mb-2">
-                <Link to="/blog" className="text-light text-decoration-none">
-                  <i className="bi bi-newspaper me-2"></i>
-                  Blog
-                </Link>
-              </li>
-              <li className="mb-2">
                 <Link to="/responsible-play" className="text-light text-decoration-none">
                   <i className="bi bi-shield-check me-2"></i>
                   Responsible Play

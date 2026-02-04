@@ -130,6 +130,23 @@ const validateProfileUpdate = [
     .isBoolean()
     .withMessage('Notifications enabled must be a boolean value'),
   
+  body('predictionNotificationsEnabled')
+    .optional()
+    .isBoolean()
+    .withMessage('Prediction notifications must be a boolean value'),
+  
+  body('notificationLotteries')
+    .optional()
+    .isArray()
+    .withMessage('Notification lotteries must be an array'),
+  body('notificationLotteries.*')
+    .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
+    .withMessage('Each notification lottery must be a valid lottery type'),
+  body('notificationLotteries')
+    .optional()
+    .custom((val) => !val || (Array.isArray(val) && val.length <= 2))
+    .withMessage('You may select at most 2 lotteries for notifications (one is your preferred lottery)'),
+  
   handleValidationErrors
 ];
 

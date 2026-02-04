@@ -95,6 +95,60 @@ const getPredictions = async (req, res) => {
   }
 };
 
+// @desc    Get the latest uploaded prediction for a lottery (by createdAt) - for Number Generator exclusions
+// @route   GET /api/predictions/:lotteryType/latest
+// @access  Public
+const getLatestPrediction = async (req, res) => {
+  try {
+    const { lotteryType } = req.params;
+
+    const validLotteryTypes = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    if (!validLotteryTypes.includes(lotteryType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lottery type'
+      });
+    }
+
+    const prediction = await Prediction.findOne({
+      lotteryType,
+      isActive: true
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!prediction) {
+      return res.json({
+        success: true,
+        data: { prediction: null }
+      });
+    }
+
+    const predictionObj = await Prediction.findById(prediction._id);
+    res.json({
+      success: true,
+      data: {
+        prediction: {
+          id: prediction._id,
+          lotteryType: prediction.lotteryType,
+          lotteryDisplayName: prediction.lotteryDisplayName,
+          drawDate: prediction.drawDate,
+          drawTime: prediction.drawTime,
+          viableNumbers: predictionObj.getViableNumbers(),
+          isActive: prediction.isActive,
+          createdAt: prediction.createdAt
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get latest prediction error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 // @desc    Get specific prediction details
 // @route   GET /api/predictions/:lotteryType/:id
 // @access  Private (requires purchase OR trial)
@@ -882,6 +936,7 @@ const getPredictionResult = async (req, res) => {
 
 export {
   getPredictions,
+  getLatestPrediction,
   getPredictionDetails,
   purchasePrediction,
   getMyPurchases,

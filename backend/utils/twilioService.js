@@ -155,38 +155,43 @@ export const sendOTP = async (to, otp) => {
 };
 
 /**
- * Notify all users who prefer a specific lottery
+ * Notify users who want updates for a specific lottery (new prediction or result announced).
+ * Only sends SMS when Prediction Notifications is enabled. Verification messages (OTP) are
+ * always sent regardless of this setting.
+ *
  * @param {string} lotteryType - The type of lottery (e.g., 'gopher5')
  * @param {string} message - The message to send
  */
 export const notifyUsersByLottery = async (lotteryType, message) => {
     try {
-        // Find users who have selected this lottery and have prediction notifications enabled
-        // Also ensure they have a phone number
-        // Note: predictionNotificationsEnabled controls prediction updates only
-        // Verification messages (OTP) are always sent regardless of this setting
-        // Exclude admin users from prediction notifications
+        // Only users with Prediction Notifications enabled receive lottery SMS.
+        // Match: (preferred lottery OR lottery in notificationLotteries) AND predictionNotificationsEnabled === true
         const users = await User.find({
-            selectedLottery: lotteryType,
-            predictionNotificationsEnabled: true,  // Only match users with this explicitly set to true
-            phone: { $exists: true, $ne: '' },
-            role: { $ne: 'admin' }  // Exclude admin users
-        }).select('phone predictionNotificationsEnabled selectedLottery role _id');
+            $and: [
+                { predictionNotificationsEnabled: true },
+                { phone: { $exists: true, $ne: '' } },
+                { role: { $ne: 'admin' } },
+                {
+                    $or: [
+                        { selectedLottery: lotteryType },
+                        { notificationLotteries: lotteryType }
+                    ]
+                }
+            ]
+        }).select('phone predictionNotificationsEnabled selectedLottery notificationLotteries role _id');
 
-        // Double-check: filter out any users where predictionNotificationsEnabled is not explicitly true
-        // Also exclude admin users (should already be filtered by query, but double-check for safety)
-        // This ensures we don't send to users who have disabled notifications or where the field is missing/undefined
+        // Double-check: do not send if user has disabled Prediction Notifications
         const eligibleUsers = users.filter(user => {
             const isEnabled = user.predictionNotificationsEnabled === true;
             const isNotAdmin = user.role !== 'admin';
-            
+
             if (!isEnabled) {
-                console.log(`Skipping user ${user.phone} - predictionNotificationsEnabled is: ${user.predictionNotificationsEnabled} (type: ${typeof user.predictionNotificationsEnabled})`);
+                console.log(`Skipping user ${user.phone} - Prediction Notifications disabled`);
             }
             if (!isNotAdmin) {
                 console.log(`Skipping admin user ${user.phone} - admins do not receive prediction notifications`);
             }
-            
+
             return isEnabled && isNotAdmin;
         });
 

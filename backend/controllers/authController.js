@@ -205,6 +205,7 @@ const login = async (req, res) => {
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
           predictionNotificationsEnabled: user.predictionNotificationsEnabled,
+          notificationLotteries: user.notificationLotteries || [],
           createdAt: getUserCreatedAt(user)
         },
         token
@@ -243,7 +244,7 @@ const getMe = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.userId).lean();
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -254,6 +255,11 @@ const getMe = async (req, res) => {
     // Get wallet balance
     const wallet = await Wallet.findOne({ user: user._id });
     const walletBalance = wallet ? wallet.balance : 0;
+
+    // Ensure notificationLotteries is always a plain string array for the API
+    const notificationLotteriesList = Array.isArray(user.notificationLotteries)
+      ? user.notificationLotteries.map(l => (typeof l === 'string' ? l : String(l)))
+      : [];
 
     res.json({
       success: true,
@@ -268,11 +274,12 @@ const getMe = async (req, res) => {
           selectedLottery: user.selectedLottery,
           trialStartDate: user.trialStartDate,
           trialEndDate: user.trialEndDate,
-          isInTrial: user.isInTrial(),
+          isInTrial: new Date() <= new Date(user.trialEndDate),
           walletBalance: walletBalance,
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
           predictionNotificationsEnabled: user.predictionNotificationsEnabled,
+          notificationLotteries: notificationLotteriesList,
           isPhoneVerified: user.isPhoneVerified,
           createdAt: getUserCreatedAt(user)
         }
@@ -292,7 +299,7 @@ const getMe = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, selectedLottery, notificationsEnabled, predictionNotificationsEnabled } = req.body;
+    const { firstName, lastName, email, phone, selectedLottery, notificationsEnabled, predictionNotificationsEnabled, notificationLotteries } = req.body;
     const userId = req.user.userId;
 
     const user = await User.findById(userId);
@@ -328,28 +335,48 @@ const updateProfile = async (req, res) => {
       user.selectedLottery = selectedLottery;
     }
 
+    // Update notification lotteries (max 2: preferred + one more, validated by middleware)
+    const validLotteries = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    let notificationLotteriesToSave = user.notificationLotteries || [];
+    if (notificationLotteries !== undefined) {
+      notificationLotteriesToSave = Array.isArray(notificationLotteries)
+        ? notificationLotteries.filter(l => validLotteries.includes(l)).slice(0, 2)
+        : [];
+      user.notificationLotteries = notificationLotteriesToSave;
+    }
+
     await user.save();
+
+    // Refetch from DB so response matches persisted data (including notificationLotteries)
+    const savedUser = await User.findById(userId).lean();
+    // Ensure notificationLotteries is always a plain string array for the API
+    const savedNotificationLotteries = Array.isArray(savedUser.notificationLotteries)
+      ? savedUser.notificationLotteries.map(l => (typeof l === 'string' ? l : String(l)))
+      : [];
+    const wallet = await Wallet.findOne({ user: userId });
+    const walletBalance = wallet ? wallet.balance : 0;
 
     res.json({
       success: true,
       message: 'Profile updated successfully',
       data: {
         user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          country: user.country,
-          selectedLottery: user.selectedLottery,
-          trialStartDate: user.trialStartDate,
-          trialEndDate: user.trialEndDate,
-          isInTrial: user.isInTrial(),
-          walletBalance: user.walletBalance,
-          role: user.role,
-          notificationsEnabled: user.notificationsEnabled,
-          predictionNotificationsEnabled: user.predictionNotificationsEnabled,
-          createdAt: getUserCreatedAt(user)
+          id: savedUser._id,
+          firstName: savedUser.firstName,
+          lastName: savedUser.lastName,
+          email: savedUser.email,
+          phone: savedUser.phone,
+          country: savedUser.country,
+          selectedLottery: savedUser.selectedLottery,
+          trialStartDate: savedUser.trialStartDate,
+          trialEndDate: savedUser.trialEndDate,
+          isInTrial: new Date() <= new Date(savedUser.trialEndDate),
+          walletBalance: walletBalance,
+          role: savedUser.role,
+          notificationsEnabled: savedUser.notificationsEnabled,
+          predictionNotificationsEnabled: savedUser.predictionNotificationsEnabled,
+          notificationLotteries: savedNotificationLotteries,
+          createdAt: getUserCreatedAt(savedUser)
         }
       }
     });

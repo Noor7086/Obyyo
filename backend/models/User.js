@@ -107,6 +107,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Up to 2 lotteries for SMS update notifications (one is preferred lottery). Plain string array; validation in middleware.
+  notificationLotteries: {
+    type: [String],
+    default: []
+  },
   resetPasswordCode: {
     type: String,
     default: null

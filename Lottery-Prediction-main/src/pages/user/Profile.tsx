@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Badge, Modal } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 import { apiService } from '../../services/api';
+import { LotteryType } from '../../types';
 
 const Profile: React.FC = () => {
   const { user, updateProfile, changePassword, logout } = useAuth();
@@ -17,7 +18,8 @@ const Profile: React.FC = () => {
     email: user?.email || '',
     phone: user?.phone || '',
     selectedLottery: user?.selectedLottery || '',
-    predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
+    predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true,
+    notificationLotteries: (user?.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : [] as LotteryType[]
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -55,12 +57,14 @@ const Profile: React.FC = () => {
           }
           // Don't update predictionNotificationsEnabled while updating
           return {
+            ...prev,
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             email: user.email || '',
             phone: user.phone || '',
             selectedLottery: user.selectedLottery || '',
-            predictionNotificationsEnabled: prev.predictionNotificationsEnabled
+            predictionNotificationsEnabled: prev.predictionNotificationsEnabled,
+            notificationLotteries: (user.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
           };
         }
         
@@ -70,8 +74,8 @@ const Profile: React.FC = () => {
           email: user.email || '',
           phone: user.phone || '',
           selectedLottery: user.selectedLottery || '',
-          // Use the user's value from context
-          predictionNotificationsEnabled: userPredictionNotifications
+          predictionNotificationsEnabled: userPredictionNotifications,
+          notificationLotteries: (user.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
         };
       });
     }
@@ -289,12 +293,18 @@ const Profile: React.FC = () => {
         phone: user?.phone || formData.phone, // Keep original phone, don't allow changes
         selectedLottery: formData.selectedLottery,
         notificationsEnabled: true,
-        predictionNotificationsEnabled: formData.predictionNotificationsEnabled
+        predictionNotificationsEnabled: formData.predictionNotificationsEnabled,
+        notificationLotteries: (formData.notificationLotteries || []) as LotteryType[]
       };
-      await updateProfile(updateData);
+      const updatedUser = await updateProfile(updateData);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
       setErrors({}); // Clear errors on success
+      // Keep notification checkboxes in sync with saved data
+      const savedNotifLotteries = updatedUser?.notificationLotteries;
+      if (Array.isArray(savedNotifLotteries)) {
+        setFormData(prev => ({ ...prev, notificationLotteries: [...savedNotifLotteries] as LotteryType[] }));
+      }
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update profile. Please try again.';
       setMessage({ type: 'error', text: errorMessage });
@@ -412,7 +422,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  const lotteryTypes = [
+  const lotteryTypes: { value: LotteryType; label: string }[] = [
     { value: 'gopher5', label: 'Gopher 5' },
     { value: 'pick3', label: 'Pick 3' },
     { value: 'lottoamerica', label: 'Lotto America' },
@@ -498,7 +508,8 @@ const Profile: React.FC = () => {
                         email: user?.email || '',
                         phone: user?.phone || '',
                         selectedLottery: user?.selectedLottery || '',
-                        predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
+                        predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true,
+                        notificationLotteries: (user?.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
                       });
                       setErrors({});
                       setMessage(null);
@@ -511,7 +522,7 @@ const Profile: React.FC = () => {
               </div>
             </Card.Header>
             <Card.Body className="p-4">
-              <Form onSubmit={handleProfileUpdate}>
+              <Form onSubmit={handleProfileUpdate} id="profile-form">
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
@@ -613,12 +624,64 @@ const Profile: React.FC = () => {
                     </Form.Control.Feedback>
                   )}
                 </Form.Group>
+              </Form>
+            </Card.Body>
+          </Card>
+
+          {/* Notification Settings */}
+          <Card className="border-0 shadow-custom-md mb-4">
+            <Card.Header className="bg-white border-0 py-3">
+              <h5 className="mb-0 fw-bold">
+                <i className="bi bi-bell me-2 text-primary"></i>
+                Notification Settings
+              </h5>
+            </Card.Header>
+            <Card.Body className="p-4">
+              <Form onSubmit={handleProfileUpdate}>
+                <Form.Group className="mb-4">
+                  <Form.Label className="fw-medium mb-2">Lottery update notifications</Form.Label>
+                  <Form.Text className="text-muted d-block mb-2">
+                    You already receive notifications for your preferred lottery (set in Personal Information above). Select up to 2 additional lotteries below for SMS updates.
+                  </Form.Text>
+                  <div className="d-flex flex-wrap gap-3">
+                    {lotteryTypes
+                      .filter((lottery) => lottery.value !== formData.selectedLottery)
+                      .map((lottery) => {
+                        const isChecked = formData.notificationLotteries?.includes(lottery.value) ?? false;
+                        const preferredLottery = formData.selectedLottery;
+                        const additionalCount = (formData.notificationLotteries ?? []).filter((l) => l !== preferredLottery).length;
+                        const atMax = additionalCount >= 2;
+                        const disabled = !isChecked && atMax;
+                        return (
+                          <Form.Check
+                            key={lottery.value}
+                            type="checkbox"
+                            id={`notif-lottery-${lottery.value}`}
+                            label={lottery.label}
+                            checked={isChecked}
+                            disabled={disabled}
+                            onChange={() => {
+                              setFormData(prev => {
+                                const list = prev.notificationLotteries ?? [];
+                                const preferred = prev.selectedLottery;
+                                const additional = list.filter((l) => l !== preferred);
+                                const has = list.includes(lottery.value);
+                                if (has) return { ...prev, notificationLotteries: list.filter(l => l !== lottery.value) as LotteryType[] };
+                                if (additional.length >= 2) return prev;
+                                return { ...prev, notificationLotteries: [...list, lottery.value] };
+                              });
+                            }}
+                          />
+                        );
+                      })}
+                  </div>
+                </Form.Group>
                 <Form.Group className="mb-4">
                   <div className="d-flex justify-content-between align-items-center">
                     <div className="flex-grow-1">
                       <Form.Label className="fw-medium mb-1">Prediction Notifications</Form.Label>
                       <Form.Text className="text-muted d-block">
-                        Receive SMS notifications when new predictions are uploaded or results are announced. 
+                        Receive SMS notifications when new predictions are uploaded or results are announced.
                         Verification messages (OTP) will always be sent regardless of this setting.
                       </Form.Text>
                     </div>
@@ -629,16 +692,9 @@ const Profile: React.FC = () => {
                       checked={formData.predictionNotificationsEnabled}
                       onChange={async (e) => {
                         const newValue = e.target.checked;
-                        // Set flag to prevent useEffect from resetting during update
                         setIsUpdatingNotifications(true);
-                        // Optimistically update the UI
-                        setFormData(prev => ({
-                          ...prev,
-                          predictionNotificationsEnabled: newValue
-                        }));
-                        // Save immediately when toggled
+                        setFormData(prev => ({ ...prev, predictionNotificationsEnabled: newValue }));
                         try {
-                          // Use current formData values but override with the new toggle value
                           await updateProfile({
                             firstName: formData.firstName,
                             lastName: formData.lastName,
@@ -646,14 +702,12 @@ const Profile: React.FC = () => {
                             phone: formData.phone,
                             selectedLottery: formData.selectedLottery,
                             notificationsEnabled: true,
-                            predictionNotificationsEnabled: newValue
+                            predictionNotificationsEnabled: newValue,
+                            notificationLotteries: (formData.notificationLotteries || []) as LotteryType[]
                           });
                           toast.success(`Prediction notifications ${newValue ? 'enabled' : 'disabled'}`);
-                          // Flag will be reset by useEffect when user context updates and matches formData
                         } catch (error: any) {
-                          // Reset flag on error
                           setIsUpdatingNotifications(false);
-                          // Revert on error - get the value from user context
                           setFormData(prev => ({
                             ...prev,
                             predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
@@ -665,25 +719,25 @@ const Profile: React.FC = () => {
                     />
                   </div>
                 </Form.Group>
-                {isEditing && (
-                  <div className="d-flex gap-2">
-                    <Button type="submit" variant="primary" disabled={loading}>
-                      <i className="bi bi-check me-1"></i>
-                      {loading ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline-secondary" 
+                <div className="d-flex gap-2">
+                  <Button type="submit" variant="primary" disabled={loading}>
+                    <i className="bi bi-check me-1"></i>
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                  {isEditing && (
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
                       onClick={() => {
                         setIsEditing(false);
-                        // Reset form data and errors when canceling
                         setFormData({
                           firstName: user?.firstName || '',
                           lastName: user?.lastName || '',
                           email: user?.email || '',
                           phone: user?.phone || '',
                           selectedLottery: user?.selectedLottery || '',
-                          predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true
+                          predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true,
+                          notificationLotteries: (user?.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
                         });
                         setErrors({});
                         setMessage(null);
@@ -691,8 +745,8 @@ const Profile: React.FC = () => {
                     >
                       Cancel
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </Form>
             </Card.Body>
           </Card>

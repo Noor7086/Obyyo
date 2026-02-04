@@ -108,20 +108,19 @@ const NumberGenerator: React.FC = () => {
 
   const fetchExcludedNumbersForLottery = async (lotteryId: string) => {
     try {
-      // Use the nearest upcoming active prediction as the source of truth
-      const predictions = await predictionService.getPredictions(lotteryId as any, 1, 1);
-      const first = predictions?.[0];
+      // Always use the latest uploaded prediction for this lottery (by createdAt), so only
+      // its numbers are excluded; older predictions are not used for exclusion.
+      const latest = await predictionService.getLatestPrediction(lotteryId as any);
+      if (!latest) {
+        setExcludedByLottery((prev) => ({ ...prev, [lotteryId]: { main: [], bonus: [] } }));
+        return;
+      }
 
-      // Backend currently returns admin-entered non-viable numbers inside `viableNumbers`
-      // (historical naming). We treat that as the EXCLUDED set here.
-      const excluded = normalizeExcludedNumbers(lotteryId, (first as any)?.viableNumbers);
-
+      // Backend returns admin-entered non-viable numbers inside viableNumbers (historical naming).
+      const excluded = normalizeExcludedNumbers(lotteryId, (latest as any)?.viableNumbers);
       setExcludedByLottery((prev) => ({ ...prev, [lotteryId]: excluded }));
     } catch (e) {
-      // If fetch fails, default to no exclusions (full range)
       setExcludedByLottery((prev) => ({ ...prev, [lotteryId]: { main: [], bonus: [] } }));
-    } finally {
-      // no-op
     }
   };
 

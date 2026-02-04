@@ -29,6 +29,19 @@ class PredictionService {
     }
   }
 
+  /** Get the latest uploaded prediction for a lottery (by createdAt). Used e.g. by Number Generator for exclusions. */
+  async getLatestPrediction(lotteryType: LotteryType): Promise<Prediction | null> {
+    try {
+      const response = await apiService.get<ApiResponse<{ prediction: Prediction | null }>>(
+        `/predictions/latest/${lotteryType}`
+      );
+      if (!response.success) return null;
+      return response.data?.prediction ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async getPredictionDetails(lotteryType: LotteryType, id: string): Promise<Prediction> {
     try {
       const response = await apiService.get<ApiResponse<{ prediction: Prediction }>>(

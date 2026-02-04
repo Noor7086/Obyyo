@@ -75,8 +75,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (data: ProfileUpdateForm) => {
     try {
       const updatedUser = await authService.updateProfile(data);
-      setUser(updatedUser);
+      setUser(prev => (prev ? { ...prev, ...updatedUser } : updatedUser));
       toast.success('Profile updated successfully!');
+      return updatedUser;
     } catch (error: any) {
       toast.error(error.message || 'Profile update failed');
       throw error;
