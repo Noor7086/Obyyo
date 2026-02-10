@@ -39,7 +39,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import AdminRoute from './components/auth/AdminRoute'
 import AdminRedirect from './components/auth/AdminRedirect'
 import PublicRoute from './components/auth/PublicRoute'
-// import TawkTo from './components/TawkTo'
+import TawkTo from './components/TawkTo'
 
 // Component to scroll to top on route change
 const ScrollToTop = () => {
@@ -111,7 +111,7 @@ function App() {
           <div className="App" style={{ margin: 0, padding: 0 }}>
             <ScrollToTop />
             <SessionManager />
-            {/* <TawkTo /> */}
+            <TawkTo />
             <ConditionalNavbar />
             <main style={{ margin: 0, padding: 0 }}>
               <Routes>

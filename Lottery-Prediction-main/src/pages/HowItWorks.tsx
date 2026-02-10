@@ -10,7 +10,7 @@ const HowItWorks: React.FC = () => {
       details: [
         'Choose from 5 supported lottery types',
         'Provide your phone number',
-        'No subscription fees during trial period'
+        'No fees during trial period'
       ]
     },
     {
@@ -153,7 +153,7 @@ const HowItWorks: React.FC = () => {
                     <i className="bi bi-gift text-primary fs-1 mb-3"></i>
                     <h5>Free Trial</h5>
                     <p className="text-muted">
-                      7 days of free predictions for your selected lottery. 
+                      7 days of free predictions for your selected lottery.
                       No credit card required to start.
                     </p>
                   </div>
@@ -163,7 +163,7 @@ const HowItWorks: React.FC = () => {
                     <i className="bi bi-credit-card text-success fs-1 mb-3"></i>
                     <h5>Pay-Per-Use</h5>
                     <p className="text-muted">
-                      After trial, pay only when you need predictions. 
+                      After trial, pay only when you need predictions.
                       Cost equals one lottery line price.
                     </p>
                   </div>
@@ -173,7 +173,7 @@ const HowItWorks: React.FC = () => {
                     <i className="bi bi-wallet text-info fs-1 mb-3"></i>
                     <h5>Wallet System</h5>
                     <p className="text-muted">
-                      Preload your account for quick, one-click payments. 
+                      Preload your account for quick, one-click payments.
                       Secure and convenient.
                     </p>
                   </div>
@@ -183,7 +183,7 @@ const HowItWorks: React.FC = () => {
                     <i className="bi bi-bell text-warning fs-1 mb-3"></i>
                     <h5>Instant Alerts</h5>
                     <p className="text-muted">
-                      Get instant notifications when new predictions 
+                      Get instant notifications when new predictions
                       are available for your lottery.
                     </p>
                   </div>

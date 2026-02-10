@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { predictionService } from '../../services/predictionService';
 import { walletService } from '../../services/walletService';
 import { lotteryService } from '../../services/lotteryService';
-import { 
+import {
   FaUser
 } from 'react-icons/fa';
 import TrialCountdown from '../../components/TrialCountdown';
@@ -38,23 +38,23 @@ const Dashboard: React.FC = () => {
   // Calculate trial days left from user model fields (hasUsedTrial, trialEndDate)
   const trialDaysLeft = useMemo(() => {
     if (!user) return 0;
-    
+
     // If user has used trial, return 0
     if (user.hasUsedTrial) {
       return 0;
     }
-    
+
     // If no trial end date, return 0
     if (!user.trialEndDate) {
       return 0;
     }
-    
+
     // Check if trial is still active
     const now = new Date();
     const endDate = new Date(user.trialEndDate);
     const diffTime = endDate.getTime() - now.getTime();
     const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     // Return days if positive, otherwise 0 (trial expired)
     return Math.max(0, days);
   }, [user]);
@@ -65,10 +65,10 @@ const Dashboard: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
       try {
         // Loading user stats
-        
+
         // Fetch data from multiple endpoints in parallel
         const [purchasesResponse, walletStatsResponse, lotteriesResponse] = await Promise.allSettled([
           predictionService.getMyPurchases(1, 100), // Get purchases for total predictions
@@ -88,12 +88,12 @@ const Dashboard: React.FC = () => {
         if (purchasesResponse.status === 'fulfilled') {
           const purchases = purchasesResponse.value;
           // Count all valid purchases: completed, pending, and trial (free trial predictions)
-          totalPredictions = purchases.filter(p => 
-            p.paymentStatus === 'completed' || 
-            p.paymentStatus === 'pending' || 
+          totalPredictions = purchases.filter(p =>
+            p.paymentStatus === 'completed' ||
+            p.paymentStatus === 'pending' ||
             p.paymentStatus === 'trial'
           ).length;
-          
+
           // Get recent activity from purchases (last 5)
           recentActivity = purchases
             .slice(0, 5)
@@ -185,6 +185,13 @@ const Dashboard: React.FC = () => {
       icon: <i className="bi bi-wallet2 text-secondary fs-4"></i>,
       action: () => navigate('/wallet'),
       variant: 'secondary'
+    },
+    {
+      title: 'Notification Settings',
+      description: 'Manage your notification preferences',
+      icon: <i className="bi bi-gear text-dark fs-4"></i>,
+      action: () => navigate('/profile#notifications'),
+      variant: 'dark'
     }
   ];
 
@@ -268,7 +275,7 @@ const Dashboard: React.FC = () => {
       <Row>
         {quickActions.map((action, index) => (
           <Col md={6} lg={3} className="mb-3" key={index}>
-            <Card 
+            <Card
               className="h-100 border-0 shadow-sm quick-action-card"
               style={{ cursor: 'pointer' }}
               onClick={action.action}
@@ -313,9 +320,9 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm" 
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
                     className="w-100 mt-2"
                     onClick={() => navigate('/my-predictions')}
                   >

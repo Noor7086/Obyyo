@@ -12,7 +12,7 @@ import 'swiper/css/pagination';
 
 const Home: React.FC = () => {
   const { user, canStartTrial } = useAuth();
-  
+
   // SEO Configuration
   useSEO({
     title: 'Obyyo - Lottery Prediction Platform | 80-100% Accurate Predictions',
@@ -56,11 +56,11 @@ const Home: React.FC = () => {
           // Find elements within the observed section
           const leftElements = entry.target.querySelectorAll('.fade-in-left');
           const rightElements = entry.target.querySelectorAll('.fade-in-right');
-          
+
           leftElements.forEach(element => {
             element.classList.add('animate');
           });
-          
+
           rightElements.forEach(element => {
             element.classList.add('animate');
           });
@@ -71,7 +71,7 @@ const Home: React.FC = () => {
     // Observe both pricing and how it works sections
     const pricingSection = document.getElementById('pricing');
     const howItWorksSection = document.getElementById('how-it-works');
-    
+
     if (pricingSection) {
       observer.observe(pricingSection);
     }
@@ -317,48 +317,47 @@ const Home: React.FC = () => {
           <div className="hero-slide hero-slide-3"></div>
           <div className="hero-slide hero-slide-4"></div>
           <div className="hero-overlay"></div>
-                    </div>
+        </div>
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8 col-xl-6 text-center">
               <div className="hero-content-new">
                 <h1 className="hero-title-new fade-in">
                   Advanced Lottery Prediction Technology
-                    </h1>
+                </h1>
                 <p className="hero-subtitle-new fade-in animate-delay-1">
-                  Leverage advanced analytics and algorithms to identify non-viable numbers with 95%+ accuracy. 
-                  Join over 50,000 professionals who trust Obyyo for data-driven lottery strategies.
-                    </p>
+                  Leverage advanced analytics and algorithms to identify non-viable numbers with 95%+ accuracy. (Non-Viable numbers are those number which you have to avoid in your favorite lottery). Join over 50,000 professionals who trust Obyyo for data-driven lottery strategies.
+                </p>
                 <div className="d-flex flex-wrap gap-3 justify-content-center mb-5 fade-in animate-delay-2">
-                      {user ? (
+                  {user ? (
                     <Link to="/dashboard" className="btn btn-primary btn-lg px-5 hover-lift">
-                          <i className="bi bi-speedometer2 me-2"></i>
+                      <i className="bi bi-speedometer2 me-2"></i>
                       Go to Dashboard
+                    </Link>
+                  ) : (
+                    <>
+                      {canStartTrial() ? (
+                        <Link to="/register" className="btn btn-primary btn-lg px-5 hover-lift">
+                          <i className="bi bi-rocket-takeoff me-2"></i>
+                          Start Free Trial
                         </Link>
                       ) : (
-                        <>
-                          {canStartTrial() ? (
-                        <Link to="/register" className="btn btn-primary btn-lg px-5 hover-lift">
-                              <i className="bi bi-rocket-takeoff me-2"></i>
-                          Start Free Trial
-                            </Link>
-                          ) : (
                         <Link to="/pricing" className="btn btn-primary btn-lg px-5 hover-lift">
-                              <i className="bi bi-credit-card me-2"></i>
+                          <i className="bi bi-credit-card me-2"></i>
                           View Pricing
-                            </Link>
-                          )}
-                      <Link to="/how-it-works" className="btn btn-secondary btn-lg px-4 hover-lift">
-                            <i className="bi bi-question-circle me-2"></i>
-                            How It Works
-                          </Link>
-                        </>
+                        </Link>
                       )}
-                        </div>
+                      <Link to="/how-it-works" className="btn btn-secondary btn-lg px-4 hover-lift">
+                        <i className="bi bi-question-circle me-2"></i>
+                        How It Works
+                      </Link>
+                    </>
+                  )}
+                </div>
 
-                            </div>
-                            </div>
-                            </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -370,9 +369,9 @@ const Home: React.FC = () => {
             <p className="lead text-muted mb-4">
               Choose from our comprehensive list of lottery predictions with advanced analysis
             </p>
-            
+
           </div>
-          
+
           <div className="lottery-swiper-container">
             <Swiper
               modules={[Navigation, Pagination, Autoplay]}
@@ -409,7 +408,7 @@ const Home: React.FC = () => {
             >
               {lotteryTypes.map((lottery, index) => (
                 <SwiperSlide key={lottery.type}>
-                  <div className="enhanced-lottery-card h-100 fade-in" style={{ 
+                  <div className="enhanced-lottery-card h-100 fade-in" style={{
                     animationDelay: `${index * 0.1}s`,
                     boxShadow: '0 15px 40px rgba(0, 0, 0, 0.12), 0 5px 20px rgba(0, 0, 0, 0.08)',
                     borderRadius: '20px',
@@ -424,13 +423,13 @@ const Home: React.FC = () => {
                       <div className="lottery-icon-enhanced">
                         <span className="lottery-emoji">{lottery.icon}</span>
                         <div className="icon-glow"></div>
-                    </div>
+                      </div>
                       <div className="popular-badge">
                         <i className="bi bi-star-fill"></i>
                         Popular
                       </div>
                     </div>
-                    
+
                     {/* Card Content */}
                     <div className="card-content">
                       <h4 className="lottery-name-enhanced">{lottery.name}</h4>
@@ -439,9 +438,9 @@ const Home: React.FC = () => {
                         {lottery.state}
                       </p>
                       <p className="lottery-description-enhanced">{lottery.description}</p>
-                      
+
                     </div>
-                    
+
                     {/* Card Footer */}
                     <div className="card-footer-enhanced">
                       <div className="price-section">
@@ -449,7 +448,7 @@ const Home: React.FC = () => {
                         <span className="lottery-price-enhanced">${lottery.price}</span>
                         <span className="price-unit">/prediction</span>
                       </div>
-                      <Link 
+                      <Link
                         to={`/predictions?lottery=${lottery.type}`}
                         className="btn hover-lift"
                         style={{
@@ -468,14 +467,14 @@ const Home: React.FC = () => {
                         <i className="bi bi-lightning-fill ms-2"></i>
                       </Link>
                     </div>
-                    
+
                     {/* Hover Effects */}
                     <div className="card-hover-overlay"></div>
                   </div>
                 </SwiperSlide>
               ))}
             </Swiper>
-            
+
             {/* Enhanced Navigation Buttons */}
             <div className="swiper-button-prev-custom enhanced-nav-btn">
               <i className="bi bi-chevron-left"></i>
@@ -483,11 +482,11 @@ const Home: React.FC = () => {
             <div className="swiper-button-next-custom enhanced-nav-btn">
               <i className="bi bi-chevron-right"></i>
             </div>
-            
+
             {/* Enhanced Pagination */}
             <div className="swiper-pagination-custom enhanced-pagination"></div>
           </div>
-          
+
         </div>
       </section>
 
@@ -506,22 +505,22 @@ const Home: React.FC = () => {
                 <div className="feature-item-clean fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="feature-icon-clean mb-3">
                     <div className="icon-wrapper-clean d-inline-flex align-items-center justify-content-center rounded-circle"
-                           style={{ 
-                             width: '70px', 
-                             height: '70px',
-                           background: `linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)`,
-                           border: '1px solid rgba(99, 102, 241, 0.15)',
-                           position: 'relative',
-                           overflow: 'hidden'
-                           }}>
-                      <i className={`${feature.icon} text-primary fs-3`} style={{ 
+                      style={{
+                        width: '70px',
+                        height: '70px',
+                        background: `linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)`,
+                        border: '1px solid rgba(99, 102, 241, 0.15)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                      <i className={`${feature.icon} text-primary fs-3`} style={{
                         zIndex: 2,
                         position: 'relative'
                       }}></i>
-                      </div>
                     </div>
+                  </div>
                   <h5 className="fw-bold mb-2 text-dark">{feature.title}</h5>
-                    <p className="text-muted lh-lg">{feature.description}</p>
+                  <p className="text-muted lh-lg">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -542,7 +541,7 @@ const Home: React.FC = () => {
             {/* How It Works Steps - Right Side */}
             <div className="col-lg-8">
               <div className="detailed-steps fade-in-right">
-          <div className="row g-4 justify-content-center">
+                <div className="row g-4 justify-content-center">
                   {/* Step 1: Free Trial */}
                   <div className="col-lg-5 col-md-6">
                     <div className="enhanced-step-item h-100" style={{
@@ -566,26 +565,26 @@ const Home: React.FC = () => {
                         borderRadius: '50%',
                         pointerEvents: 'none'
                       }}></div>
-                      
+
                       <div className="step-header d-flex align-items-center mb-3" style={{ position: 'relative', zIndex: 2 }}>
-                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle" 
-                       style={{ 
-                               width: '50px', 
-                               height: '50px', 
-                               minWidth: '50px',
-                               minHeight: '50px',
-                               borderRadius: '50%',
-                               background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                               color: 'white',
-                               fontSize: '1.2rem',
-                               fontWeight: 'bold',
-                               lineHeight: '1',
-                               display: 'flex',
-                               alignItems: 'center',
-                               justifyContent: 'center',
-                               boxShadow: '0 6px 20px rgba(59, 130, 246, 0.3)',
-                               position: 'relative'
-                             }}>
+                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle"
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            minWidth: '50px',
+                            minHeight: '50px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                            color: 'white',
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            lineHeight: '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 6px 20px rgba(59, 130, 246, 0.3)',
+                            position: 'relative'
+                          }}>
                           <div style={{
                             position: 'absolute',
                             top: '-2px',
@@ -686,26 +685,26 @@ const Home: React.FC = () => {
                         borderRadius: '50%',
                         pointerEvents: 'none'
                       }}></div>
-                      
+
                       <div className="step-header d-flex align-items-center mb-3" style={{ position: 'relative', zIndex: 2 }}>
-                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle" 
-                             style={{ 
-                               width: '50px', 
-                               height: '50px', 
-                               minWidth: '50px',
-                               minHeight: '50px',
-                               borderRadius: '50%',
-                               background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                               color: 'white',
-                               fontSize: '1.2rem',
-                               fontWeight: 'bold',
-                               lineHeight: '1',
-                               display: 'flex',
-                               alignItems: 'center',
-                               justifyContent: 'center',
-                               boxShadow: '0 6px 20px rgba(220, 38, 38, 0.3)',
-                               position: 'relative'
-                             }}>
+                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle"
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            minWidth: '50px',
+                            minHeight: '50px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                            color: 'white',
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            lineHeight: '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 6px 20px rgba(220, 38, 38, 0.3)',
+                            position: 'relative'
+                          }}>
                           <div style={{
                             position: 'absolute',
                             top: '-2px',
@@ -806,26 +805,26 @@ const Home: React.FC = () => {
                         borderRadius: '50%',
                         pointerEvents: 'none'
                       }}></div>
-                      
+
                       <div className="step-header d-flex align-items-center mb-3" style={{ position: 'relative', zIndex: 2 }}>
-                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle" 
-                             style={{ 
-                               width: '50px', 
-                               height: '50px', 
-                               minWidth: '50px',
-                               minHeight: '50px',
-                               borderRadius: '50%',
-                               background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                               color: 'white',
-                               fontSize: '1.2rem',
-                               fontWeight: 'bold',
-                               lineHeight: '1',
-                               display: 'flex',
-                               alignItems: 'center',
-                               justifyContent: 'center',
-                               boxShadow: '0 6px 20px rgba(5, 150, 105, 0.3)',
-                               position: 'relative'
-                             }}>
+                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle"
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            minWidth: '50px',
+                            minHeight: '50px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                            color: 'white',
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            lineHeight: '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 6px 20px rgba(5, 150, 105, 0.3)',
+                            position: 'relative'
+                          }}>
                           <div style={{
                             position: 'absolute',
                             top: '-2px',
@@ -943,26 +942,26 @@ const Home: React.FC = () => {
                         borderRadius: '50%',
                         pointerEvents: 'none'
                       }}></div>
-                      
+
                       <div className="step-header d-flex align-items-center mb-3" style={{ position: 'relative', zIndex: 2 }}>
-                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle" 
-                             style={{ 
-                               width: '50px', 
-                               height: '50px', 
-                               minWidth: '50px',
-                               minHeight: '50px',
-                               borderRadius: '50%',
-                               background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
-                               color: 'white',
-                               fontSize: '1.2rem',
-                               fontWeight: 'bold',
-                               lineHeight: '1',
-                               display: 'flex',
-                               alignItems: 'center',
-                               justifyContent: 'center',
-                               boxShadow: '0 6px 20px rgba(124, 58, 237, 0.3)',
-                               position: 'relative'
-                             }}>
+                        <div className="step-number me-3 d-flex align-items-center justify-content-center rounded-circle"
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            minWidth: '50px',
+                            minHeight: '50px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+                            color: 'white',
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            lineHeight: '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 6px 20px rgba(124, 58, 237, 0.3)',
+                            position: 'relative'
+                          }}>
                           <div style={{
                             position: 'absolute',
                             top: '-2px',
@@ -1042,7 +1041,7 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* iPhone Mockup - Left Side */}
             <div className="col-lg-4">
               <div className="iphone-mockup fade-in-left">
@@ -1092,10 +1091,10 @@ const Home: React.FC = () => {
 
 
       {/* Professional Pricing Section */}
-      <section id="pricing" className="py-5" style={{ 
+      <section id="pricing" className="py-5" style={{
         paddingTop: '6rem'
       }}>
-        
+
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
           <div className="text-center mb-4" style={{ paddingTop: '3rem' }}>
             <h2 className="display-5 fw-bold mb-2 text-dark">Transparent Pricing</h2>
@@ -1106,7 +1105,7 @@ const Home: React.FC = () => {
           <div className="row g-4 align-items-center justify-content-center">
             {/* Starter Plan - Left Side */}
             <div className="col-lg-4 col-md-6 mb-4">
-              <div className="card border-0 h-100 fade-in-right pricing-card-enhanced" style={{ 
+              <div className="card border-0 h-100 fade-in-right pricing-card-enhanced" style={{
                 background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
                 borderRadius: '24px',
                 boxShadow: '0 25px 60px rgba(0, 0, 0, 0.12), 0 12px 35px rgba(99, 102, 241, 0.15)',
@@ -1141,7 +1140,7 @@ const Home: React.FC = () => {
                           background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 50%)',
                           pointerEvents: 'none'
                         }}></div>
-                        <i className="bi bi-lightning text-white fs-3" style={{ 
+                        <i className="bi bi-lightning text-white fs-3" style={{
                           filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
                           zIndex: 2,
                           position: 'relative'
@@ -1151,7 +1150,7 @@ const Home: React.FC = () => {
                     <h5 className="fw-bold mb-1">Starter Plan</h5>
                     <p className="text-muted mb-0 small">Pay as you go - Simple and transparent</p>
                   </div>
-                  
+
                   <div className="pricing mb-2">
                     <div className="pricing-badge mb-1">
                       <span className="badge bg-gradient-primary text-white px-3 py-2 rounded-pill fw-semibold">
@@ -1224,8 +1223,8 @@ const Home: React.FC = () => {
                     overflow: 'hidden'
                   }}>
                     <span style={{ position: 'relative', zIndex: 2 }}>
-                    <i className="bi bi-rocket-takeoff me-2"></i>
-                    Get Started Now
+                      <i className="bi bi-rocket-takeoff me-2"></i>
+                      Get Started Now
                     </span>
                     <div style={{
                       position: 'absolute',
@@ -1240,7 +1239,7 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
       </section>

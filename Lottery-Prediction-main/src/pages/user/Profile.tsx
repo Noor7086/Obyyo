@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Badge, Modal } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 import { apiService } from '../../services/api';
@@ -10,6 +10,20 @@ import { LotteryType } from '../../types';
 const Profile: React.FC = () => {
   const { user, updateProfile, changePassword, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Scroll to section based on hash
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const element = document.getElementById(id);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location]);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -48,7 +62,7 @@ const Profile: React.FC = () => {
     if (user && !isEditing) {
       setFormData(prev => {
         const userPredictionNotifications = user.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true;
-        
+
         // If we're updating notifications, check if user context now matches what we set
         if (isUpdatingNotifications) {
           // If user context matches formData, the update is complete
@@ -67,7 +81,7 @@ const Profile: React.FC = () => {
             notificationLotteries: (user.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
           };
         }
-        
+
         return {
           firstName: user.firstName || '',
           lastName: user.lastName || '',
@@ -108,7 +122,7 @@ const Profile: React.FC = () => {
       }
     }
   }, [passwordErrors, currentPasswordError]);
-  
+
   // Clear ref when password is successfully changed
   useEffect(() => {
     if (message?.type === 'success' && message.text.includes('Password updated')) {
@@ -186,7 +200,7 @@ const Profile: React.FC = () => {
       [name]: value
     };
     setPasswordData(updatedPasswordData);
-    
+
     // Clear error for this field when user starts typing (except keep current password error until they fix it)
     if (passwordErrors[name] && name !== 'currentPassword') {
       setPasswordErrors(prev => {
@@ -218,7 +232,7 @@ const Profile: React.FC = () => {
         });
       }
     }
-    
+
     // Clear validation errors for the field being edited (except current password incorrect error)
     if (name === 'newPassword' || name === 'confirmPassword') {
       setPasswordErrors(prev => {
@@ -286,7 +300,7 @@ const Profile: React.FC = () => {
     }
 
     try {
-      const updateData = { 
+      const updateData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -308,7 +322,7 @@ const Profile: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update profile. Please try again.';
       setMessage({ type: 'error', text: errorMessage });
-      
+
       // If error is about email, set email error
       if (errorMessage.toLowerCase().includes('email')) {
         setErrors(prev => ({ ...prev, email: errorMessage }));
@@ -321,9 +335,9 @@ const Profile: React.FC = () => {
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation(); // Prevent event bubbling
-    
+
     console.log('handlePasswordUpdate called');
-    
+
     setLoading(true);
     setMessage(null);
     // Don't clear passwordErrors here - preserve any existing errors
@@ -352,7 +366,7 @@ const Profile: React.FC = () => {
     } catch (error: any) {
       // Extract error message from various possible locations
       let errorMessage = 'Failed to update password. Please try again.';
-      
+
       // Try multiple ways to extract the error message
       if (error.message) {
         errorMessage = error.message;
@@ -365,39 +379,39 @@ const Profile: React.FC = () => {
           errorMessage = error.response.data.message;
         }
       }
-      
+
       // Convert to lowercase for comparison
       const lowerErrorMessage = errorMessage.toLowerCase();
-      
+
       // Check if error is about current password - be very permissive
       // Check for any mention of "current", "password", "incorrect", "wrong", "invalid"
-      const isCurrentPasswordError = 
+      const isCurrentPasswordError =
         (lowerErrorMessage.includes('current') && lowerErrorMessage.includes('password')) ||
         (lowerErrorMessage.includes('password') && (lowerErrorMessage.includes('incorrect') || lowerErrorMessage.includes('wrong') || lowerErrorMessage.includes('invalid'))) ||
         lowerErrorMessage.includes('current password') ||
         lowerErrorMessage.includes('password is incorrect') ||
         lowerErrorMessage.includes('incorrect password');
-      
+
       // Always set the error for current password field if it's a password-related error
       if (isCurrentPasswordError) {
         const errorText = 'Current password is incorrect';
-        
+
         // Store in sessionStorage to persist across React Strict Mode resets
         sessionStorage.setItem('currentPasswordError', errorText);
-        
+
         // Store in multiple places to ensure persistence
         passwordErrorRef.current = errorText;
-        
+
         // Set state multiple times to ensure it sticks
         setCurrentPasswordError(errorText);
         setPasswordErrors({ currentPassword: errorText });
-        
+
         // Use flushSync to force immediate synchronous state update
         flushSync(() => {
           setCurrentPasswordError(errorText);
           setPasswordErrors({ currentPassword: errorText });
         });
-        
+
         // Set again after a microtask to ensure it persists
         Promise.resolve().then(() => {
           setCurrentPasswordError(errorText);
@@ -405,13 +419,13 @@ const Profile: React.FC = () => {
           passwordErrorRef.current = errorText;
           sessionStorage.setItem('currentPasswordError', errorText);
         });
-        
+
         // Also set the message
         setMessage({ type: 'error', text: errorText + '. Please try again.' });
       } else {
         // For other errors, show them in the message
         setMessage({ type: 'error', text: errorMessage });
-        
+
         // If error message contains "password" at all, also show it on current password field
         if (lowerErrorMessage.includes('password')) {
           setPasswordErrors(prev => ({ ...prev, currentPassword: errorMessage }));
@@ -463,8 +477,8 @@ const Profile: React.FC = () => {
               <p className="text-muted">Manage your account information and preferences</p>
             </div>
             <div className="d-flex align-items-center">
-              <div className="avatar bg-gradient-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" 
-                   style={{ width: '60px', height: '60px' }}>
+              <div className="avatar bg-gradient-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center"
+                style={{ width: '60px', height: '60px' }}>
                 <span className="fw-bold fs-4">{user?.firstName?.charAt(0)}</span>
               </div>
               <div>
@@ -629,7 +643,7 @@ const Profile: React.FC = () => {
           </Card>
 
           {/* Notification Settings */}
-          <Card className="border-0 shadow-custom-md mb-4">
+          <Card id="notifications" className="border-0 shadow-custom-md mb-4">
             <Card.Header className="bg-white border-0 py-3">
               <h5 className="mb-0 fw-bold">
                 <i className="bi bi-bell me-2 text-primary"></i>
@@ -786,15 +800,15 @@ const Profile: React.FC = () => {
                     const sessionError = sessionStorage.getItem('currentPasswordError');
                     const hasError = !!(passwordErrors.currentPassword || currentPasswordError || passwordErrorRef.current || sessionError);
                     const errorMsg = passwordErrors.currentPassword || currentPasswordError || passwordErrorRef.current || sessionError;
-                    
+
                     if (hasError && errorMsg) {
                       return (
-                        <div 
-                          className="invalid-feedback d-block" 
-                          style={{ 
-                            display: 'block !important', 
-                            color: '#dc3545', 
-                            fontSize: '0.875rem', 
+                        <div
+                          className="invalid-feedback d-block"
+                          style={{
+                            display: 'block !important',
+                            color: '#dc3545',
+                            fontSize: '0.875rem',
                             marginTop: '0.25rem',
                             width: '100%'
                           }}
@@ -862,9 +876,9 @@ const Profile: React.FC = () => {
                     </Form.Group>
                   </Col>
                 </Row>
-                <Button 
-                  type="submit" 
-                  variant="primary" 
+                <Button
+                  type="submit"
+                  variant="primary"
                   disabled={loading}
                 >
                   <i className="bi bi-key me-1"></i>
@@ -903,10 +917,10 @@ const Profile: React.FC = () => {
                     const dateToUse = user?.createdAt || user?.trialStartDate;
                     if (dateToUse) {
                       try {
-                        return new Date(dateToUse).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                        return new Date(dateToUse).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
                         });
                       } catch (e) {
                         console.error('Error formatting date:', e);
@@ -928,8 +942,8 @@ const Profile: React.FC = () => {
               <div className="mb-3">
                 <small className="text-muted">Preferred Lottery</small>
                 <div className="fw-medium">
-                  {formData.selectedLottery ? 
-                    lotteryTypes.find(l => l.value === formData.selectedLottery)?.label || 'Not selected' 
+                  {formData.selectedLottery ?
+                    lotteryTypes.find(l => l.value === formData.selectedLottery)?.label || 'Not selected'
                     : 'Not selected'
                   }
                 </div>
@@ -947,24 +961,24 @@ const Profile: React.FC = () => {
             </Card.Header>
             <Card.Body className="p-4">
               <div className="d-grid gap-2">
-                <Button 
-                  variant="outline-primary" 
+                <Button
+                  variant="outline-primary"
                   size="sm"
                   onClick={handleDownloadPredictions}
                 >
                   <i className="bi bi-download me-2"></i>
                   Download Predictions
                 </Button>
-                <Button 
-                  variant="outline-info" 
+                <Button
+                  variant="outline-info"
                   size="sm"
                   onClick={handleHelpSupport}
                 >
                   <i className="bi bi-question-circle me-2"></i>
                   Help & Support
                 </Button>
-                <Button 
-                  variant="outline-danger" 
+                <Button
+                  variant="outline-danger"
                   size="sm"
                   onClick={() => setShowDeleteModal(true)}
                 >
@@ -1002,8 +1016,8 @@ const Profile: React.FC = () => {
           <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
             Cancel
           </Button>
-          <Button 
-            variant="danger" 
+          <Button
+            variant="danger"
             onClick={handleDeleteAccount}
             disabled={loading}
           >
