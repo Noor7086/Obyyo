@@ -284,7 +284,7 @@ router.post('/predictions', protect, authorize('admin'), validatePredictionUploa
     // Notify users about the new prediction
     notifyUsersByLottery(
       finalData.lotteryType,
-      `New prediction uploaded for ${finalData.lotteryDisplayName}! Check it out now on OBYYO.`
+      `New prediction uploaded for ${finalData.lotteryDisplayName}! Check it out now on obyyo.com.`
     ).then(count => {
       console.log(`[Twilio] Notification process started for new prediction (sent to ~${count} users)`);
     }).catch(err => {
@@ -793,7 +793,7 @@ router.post('/predictions/:id/result', protect, authorize('admin'), async (req, 
     // Notify users about the result
     notifyUsersByLottery(
       prediction.lotteryType,
-      `Results announced for ${prediction.lotteryDisplayName}! Check if you won on OBYYO.`
+      `Results announced for ${prediction.lotteryDisplayName}! Check if you won on obyyo.com.`
     ).then(count => {
       console.log(`[Twilio] Notification process started for result announcement (sent to ~${count} users)`);
     }).catch(err => {
@@ -1403,12 +1403,12 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
 
     // Combine both for total revenue (backward compatibility)
     const revenueDataMap = new Map();
-    
+
     // Add purchase revenue
     purchaseRevenueData.forEach(item => {
       revenueDataMap.set(item._id, { date: item._id, purchaseAmount: item.amount, walletAmount: 0 });
     });
-    
+
     // Add wallet revenue
     walletRevenueData.forEach(item => {
       const existing = revenueDataMap.get(item._id);
@@ -1418,7 +1418,7 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
         revenueDataMap.set(item._id, { date: item._id, purchaseAmount: 0, walletAmount: item.amount });
       }
     });
-    
+
     // Convert to array with combined total
     const revenueData = Array.from(revenueDataMap.values()).map(item => ({
       date: item.date,

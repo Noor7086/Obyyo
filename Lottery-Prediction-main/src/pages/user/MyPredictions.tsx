@@ -3,7 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { predictionService } from '../../services/predictionService';
 import { Purchase, Prediction, LotteryType } from '../../types';
 import toast from 'react-hot-toast';
-import { Modal, Button } from 'react-bootstrap';
+import { Modal, Button, Form } from 'react-bootstrap';
+import { jsPDF } from 'jspdf';
 
 interface PurchaseWithPrediction extends Purchase {
   prediction: Prediction;
@@ -18,6 +19,8 @@ const MyPredictions: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [predictionDetails, setPredictionDetails] = useState<Prediction | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -158,6 +161,135 @@ const MyPredictions: React.FC = () => {
     return null;
   };
 
+  const formatNumbersForExport = (prediction: Prediction): string => {
+    const viableData = formatViableNumbers(prediction);
+    if (!viableData) return 'N/A';
+
+    if (typeof viableData === 'object' && !Array.isArray(viableData)) {
+      const white = (viableData as any).whiteBalls || [];
+      const red = (viableData as any).redBalls || [];
+      return `White Balls: ${white.join(', ')}\nRed Ball: ${red.join(', ')}`;
+    } else if (Array.isArray(viableData)) {
+      return viableData.join(', ');
+    }
+    return 'N/A';
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (filteredPurchases.length === 0) return;
+
+    if (selectedIds.length === filteredPurchases.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredPurchases.map(p => p.id));
+    }
+  };
+
+  const handleDownloadPDF = async (items: PurchaseWithPrediction[]) => {
+    if (items.length === 0) return;
+
+    try {
+      setDownloading(true);
+      const doc = new jsPDF();
+      const margin = 20;
+      let y = 20;
+
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(33, 37, 41);
+      doc.text('My Lottery Predictions', margin, y);
+      y += 10;
+
+      doc.setFontSize(10);
+      doc.setTextColor(108, 117, 125);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, margin, y);
+      y += 15;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const pred = item.prediction;
+
+        // Check if we need a new page
+        if (y > 240) {
+          doc.addPage();
+          y = 20;
+        } else if (i > 0) {
+          // Add separator line
+          doc.setDrawColor(233, 236, 239);
+          doc.line(margin, y - 5, 190, y - 5);
+        }
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(25, 135, 84); // Success color
+        doc.text(`${pred.lotteryDisplayName}`, margin, y);
+        y += 8;
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(33, 37, 41);
+        doc.text(`Draw Date: ${new Date(pred.drawDate).toLocaleDateString()} at ${pred.drawTime}`, margin, y);
+        y += 6;
+
+        doc.text(`Purchase Date: ${new Date(item.createdAt).toLocaleDateString()}`, margin, y);
+        y += 10;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Non Viable Numbers:', margin, y);
+        y += 7;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        const numbersText = formatNumbersForExport(pred);
+        const splitText = doc.splitTextToSize(numbersText, 170);
+        doc.text(splitText, margin, y);
+        y += (splitText.length * 6) + 5;
+
+        if (pred.notes) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          const notesText = `Notes: ${pred.notes}`;
+          const splitNotes = doc.splitTextToSize(notesText, 170);
+          doc.text(splitNotes, margin, y);
+          y += (splitNotes.length * 5) + 5;
+        }
+
+        y += 10; // Extra spacing between items
+
+        // Notify backend of download (only for purchased items)
+        if (pred.id && pred.lotteryType && (item as any).id) {
+          try {
+            await predictionService.downloadPrediction(pred.lotteryType, pred.id);
+          } catch (err) {
+            console.error('Failed to increment download count:', err);
+          }
+        }
+      }
+
+      const fileName = items.length === 1
+        ? `${items[0].prediction.lotteryDisplayName}_Prediction.pdf`
+        : `OBYYO_Predictions_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      doc.save(fileName);
+      toast.success('PDF downloaded successfully!');
+
+      // Refresh purchases to update download counts in UI
+      fetchMyPurchases();
+    } catch (error: any) {
+      console.error('PDF Generation error:', error);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -270,25 +402,61 @@ const MyPredictions: React.FC = () => {
           {/* Filter */}
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body p-4">
-              <h5 className="fw-bold mb-3">
-                <i className="bi bi-funnel me-2"></i>
-                Filter Predictions
-              </h5>
-              <div className="d-flex flex-wrap gap-2">
-                {([
-                  { id: 'all' as const, name: 'All Predictions', icon: '📊' },
-                  { id: 'active' as const, name: 'Active', icon: '⏰' },
-                  { id: 'completed' as const, name: 'Completed', icon: '✅' }
-                ] as const).map((filter) => (
-                  <button
-                    key={filter.id}
-                    className={`btn ${selectedFilter === filter.id ? 'btn-primary' : 'btn-outline-primary'}`}
-                    onClick={() => setSelectedFilter(filter.id)}
-                  >
-                    <span className="me-2">{filter.icon}</span>
-                    {filter.name}
-                  </button>
-                ))}
+              <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                  <h5 className="fw-bold mb-3">
+                    <i className="bi bi-funnel me-2"></i>
+                    Filter Predictions
+                  </h5>
+                  <div className="d-flex flex-wrap gap-2">
+                    {([
+                      { id: 'all' as const, name: 'All Predictions', icon: '📊' },
+                      { id: 'active' as const, name: 'Active', icon: '⏰' },
+                      { id: 'completed' as const, name: 'Completed', icon: '✅' }
+                    ] as const).map((filter) => (
+                      <button
+                        key={filter.id}
+                        className={`btn ${selectedFilter === filter.id ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => setSelectedFilter(filter.id)}
+                      >
+                        <span className="me-2">{filter.icon}</span>
+                        {filter.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredPurchases.length > 0 && (
+                  <div className="d-flex flex-column align-items-md-end gap-2 mt-3 mt-md-0 pt-3 pt-md-0 border-top border-md-top-0">
+                    <div className="d-flex align-items-center gap-2 mb-1">
+                      <Form.Check
+                        type="checkbox"
+                        id="select-all-predictions"
+                        label={`Select All (${filteredPurchases.length})`}
+                        checked={selectedIds.length === filteredPurchases.length && filteredPurchases.length > 0}
+                        onChange={handleSelectAll}
+                        className="fw-bold"
+                      />
+                    </div>
+                    <button
+                      className="btn btn-success"
+                      disabled={selectedIds.length === 0 || downloading}
+                      onClick={() => handleDownloadPDF(filteredPurchases.filter(p => selectedIds.includes(p.id)))}
+                    >
+                      {downloading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-file-earmark-pdf me-2"></i>
+                          Download Selected ({selectedIds.length})
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -317,6 +485,15 @@ const MyPredictions: React.FC = () => {
                       <div className="card-body p-4">
                         <div className="row align-items-center">
                           <div className="col-md-2 text-center">
+                            <div className="form-check mb-3 d-flex justify-content-center">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={selectedIds.includes(purchase.id)}
+                                onChange={() => handleSelectOne(purchase.id)}
+                                style={{ transform: 'scale(1.5)', cursor: 'pointer' }}
+                              />
+                            </div>
                             <span className="fs-1">{getLotteryIcon(prediction.lotteryType)}</span>
                             <div className="mt-2">
                               {getStatusBadge(status)}
@@ -435,6 +612,20 @@ const MyPredictions: React.FC = () => {
                               >
                                 <i className="bi bi-eye me-1"></i>
                                 View Full Details
+                              </button>
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleDownloadPDF([purchase])}
+                                disabled={downloading}
+                              >
+                                {downloading ? (
+                                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                ) : (
+                                  <>
+                                    <i className="bi bi-file-earmark-pdf me-1"></i>
+                                    Download PDF
+                                  </>
+                                )}
                               </button>
                               <div className="small text-muted align-self-center ms-auto">
                                 Downloads: {purchase.downloadCount || 0}
