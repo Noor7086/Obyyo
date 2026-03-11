@@ -714,6 +714,16 @@ const Navbar: React.FC = () => {
             </li>
             <li className="nav-item">
               <Link
+                className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'} ${isActive('/announced-results') ? 'active' : ''}`}
+                to="/announced-results"
+                onClick={closeMobileMenu}
+              >
+                <i className="bi bi-trophy me-1"></i>
+                Results
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
                 className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'}`}
                 to="/how-it-works"
                 onClick={closeMobileMenu}
@@ -837,6 +847,30 @@ const Navbar: React.FC = () => {
                     >
                       <i className="bi bi-download me-2 text-info"></i>
                       My Predictions
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      className="dropdown-item py-3 px-3"
+                      to="/announced-results"
+                      onClick={closeMobileMenu}
+                      style={{
+                        fontSize: '0.95rem',
+                        fontWeight: '500',
+                        transition: 'all 0.3s ease',
+                        borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f0fdf4';
+                        e.currentTarget.style.paddingLeft = '1.5rem';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.paddingLeft = '0.75rem';
+                      }}
+                    >
+                      <i className="bi bi-trophy me-2 text-danger"></i>
+                      Announced Results
                     </Link>
                   </li>
                   <li>

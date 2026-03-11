@@ -843,6 +843,68 @@ router.get('/results/test', (req, res) => {
   res.json({ success: true, message: 'Results routes are working' });
 });
 
+// Helper: prediction ki draw date + time ab guzar chuki hai (past) ya nahi
+function isDrawInPast(prediction) {
+  if (!prediction || !prediction.drawDate) return false;
+  const drawDate = new Date(prediction.drawDate);
+  const timeStr = (prediction.drawTime || '23:59').trim();
+  const parts = timeStr.match(/^(\d{1,2}):(\d{2})/);
+  if (parts) {
+    drawDate.setHours(parseInt(parts[1], 10), parseInt(parts[2], 10), 0, 0);
+  }
+  return Date.now() >= drawDate.getTime();
+}
+
+// @route   GET /api/admin/results/recent
+// @desc    Last N announced results for Announced Results page.
+//          Only returns results where prediction's draw date+time is in the past and has winning numbers.
+// @access  Public
+router.get('/results/recent', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 5, 50);
+    const fetchLimit = Math.min(limit * 5, 100);
+    const results = await Result.find({})
+      .sort({ drawDate: -1, createdAt: -1 })
+      .limit(fetchLimit)
+      .populate('prediction');
+    const payload = [];
+    for (const r of results) {
+      if (payload.length >= limit) break;
+      if (!r.prediction) continue;
+      if (!isDrawInPast(r.prediction)) continue; // draw abhi nahi hua — show mat karo
+      const doc = r.toObject ? r.toObject() : r;
+      const hasWhite = (doc.winningNumbers?.whiteBalls && doc.winningNumbers.whiteBalls.length > 0);
+      const hasRed = (doc.winningNumbers?.redBalls && doc.winningNumbers.redBalls.length > 0);
+      const hasSingle = (doc.winningNumbersSingle && doc.winningNumbersSingle.length > 0);
+      const hasPick3 = (doc.winningNumbersPick3 && doc.winningNumbersPick3.length > 0);
+      if (!hasWhite && !hasRed && !hasSingle && !hasPick3) continue;
+      const ourPrediction = typeof r.prediction.getViableNumbers === 'function'
+        ? r.prediction.getViableNumbers()
+        : null;
+      payload.push({
+        _id: doc._id,
+        lotteryType: doc.lotteryType,
+        drawDate: doc.drawDate,
+        winningNumbers: doc.winningNumbers,
+        winningNumbersSingle: doc.winningNumbersSingle,
+        winningNumbersPick3: doc.winningNumbersPick3,
+        jackpot: doc.jackpot,
+        ourPrediction
+      });
+    }
+    res.json({
+      success: true,
+      data: { results: payload }
+    });
+  } catch (error) {
+    console.error('Get recent results error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // IMPORTANT: PUT route must come BEFORE GET /results/lottery/:lotteryType
 // @route   PUT /api/admin/results/:id
 // @desc    Update a result
@@ -961,6 +1023,26 @@ router.put('/results/:id', async (req, res, next) => {
       message: 'Server error while updating result',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// @route   DELETE /api/admin/results/:id
+// @desc    Delete a result (so it no longer appears on Announced Results page)
+// @access  Private/Admin
+router.delete('/results/:id', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid result ID format' });
+    }
+    const deleted = await Result.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Result not found' });
+    }
+    res.json({ success: true, message: 'Result deleted successfully' });
+  } catch (error) {
+    console.error('Delete result error:', error);
+    res.status(500).json({ success: false, message: 'Server error while deleting result' });
   }
 });
 

@@ -20,6 +20,7 @@ import Profile from './pages/user/Profile'
 import MyPredictions from './pages/user/MyPredictions'
 import Wallet from './pages/user/Wallet'
 import UserResults from './pages/user/Results'
+import AnnouncedResults from './pages/user/AnnouncedResults'
 import NumberGenerator from './pages/tools/NumberGenerator'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminPredictions from './pages/admin/AdminPredictions'
@@ -242,6 +243,11 @@ function App() {
                       <UserResults />
                     </AdminRedirect>
                   </ProtectedRoute>
+                } />
+                <Route path="/announced-results" element={
+                  <PublicRoute>
+                    <AnnouncedResults />
+                  </PublicRoute>
                 } />
 
                 {/* Admin Routes */}

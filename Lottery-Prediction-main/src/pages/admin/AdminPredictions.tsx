@@ -26,6 +26,7 @@ const AdminPredictions: React.FC = () => {
   const [loadingResults, setLoadingResults] = useState(false);
   const [showEditResultModal, setShowEditResultModal] = useState(false);
   const [editingResult, setEditingResult] = useState<any | null>(null);
+  const [deletingResultId, setDeletingResultId] = useState<string | null>(null);
   const [selectedPredictionIds, setSelectedPredictionIds] = useState<string[]>([]);
   const [exportPdfLoading, setExportPdfLoading] = useState(false);
   const [resultData, setResultData] = useState({
@@ -787,6 +788,27 @@ const AdminPredictions: React.FC = () => {
     } catch (error: any) {
       console.error('Error updating result:', error);
       toast.error(error.message || 'Failed to update result');
+    }
+  };
+
+  const handleDeleteResult = async (resultId: string) => {
+    if (!window.confirm('Delete this result? It will be removed from Announced Results page too.')) return;
+    try {
+      setDeletingResultId(resultId);
+      const response = await apiService.delete(`/admin/results/${resultId}`);
+      if ((response as any).success) {
+        toast.success('Result deleted. Announced Results page will no longer show it.');
+        if (selectedPrediction) {
+          await fetchPredictionResults(selectedPrediction);
+        }
+      } else {
+        throw new Error((response as any).message || 'Failed to delete result');
+      }
+    } catch (error: any) {
+      console.error('Error deleting result:', error);
+      toast.error(error.message || 'Failed to delete result');
+    } finally {
+      setDeletingResultId(null);
     }
   };
 
@@ -1662,6 +1684,19 @@ const AdminPredictions: React.FC = () => {
                                   <td>${result.jackpot?.toLocaleString() || '0'}</td>
                                   <td>{totalWinners}</td>
                                   <td>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-danger me-1"
+                                      title="Delete result (removes from Announced Results page)"
+                                      disabled={deletingResultId === result._id}
+                                      onClick={() => handleDeleteResult(result._id)}
+                                    >
+                                      {deletingResultId === result._id ? (
+                                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                      ) : (
+                                        <i className="bi bi-trash"></i>
+                                      )}
+                                    </button>
                                     <button
                                       type="button"
                                       className="btn btn-sm btn-outline-primary"
