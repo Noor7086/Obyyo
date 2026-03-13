@@ -718,8 +718,8 @@ const Navbar: React.FC = () => {
                 to="/announced-results"
                 onClick={closeMobileMenu}
               >
-                <i className="bi bi-trophy me-1"></i>
-                Results
+               
+                Past Predictions
               </Link>
             </li>
             <li className="nav-item">
