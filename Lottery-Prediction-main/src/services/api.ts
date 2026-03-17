@@ -69,14 +69,25 @@ class ApiService {
 
           switch (status) {
             case 401:
-              // Unauthorized - only redirect if not already on login page
+              // Unauthorized
               // Don't clear token or redirect during login attempt
-              if (window.location.pathname !== '/login' && !error.config?.url?.includes('/auth/login')) {
+              // Also don't force-redirect on "who am I" checks (so public pages still work with stale tokens).
+              const url401 = error.config?.url || '';
+              const isLoginAttempt = url401.includes('/auth/login');
+              const isAuthMe = url401.includes('/auth/me');
+
+              if (!isLoginAttempt) {
+                // If token is invalid/expired, clear it
                 localStorage.removeItem('token');
+              }
+
+              // Only redirect to /login when a non-public call is made (not /auth/me)
+              if (!isLoginAttempt && !isAuthMe && window.location.pathname !== '/login') {
                 window.location.href = '/login';
               }
-              // Don't show toast for login attempts - let the component handle error display
-              if (data.message && !error.config?.url?.includes('/auth/login')) {
+
+              // Don't show toast for login attempts; also suppress noisy toast for /auth/me
+              if (data.message && !isLoginAttempt && !isAuthMe) {
                 toast.error(data.message);
               }
               break;

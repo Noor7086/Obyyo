@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSEO } from '../hooks/useSEO';
 import { predictionService } from '../services/predictionService';
@@ -19,6 +19,7 @@ const Predictions: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedLottery, setSelectedLottery] = useState<LotteryType>('powerball');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [lotteries, setLotteries] = useState<Lottery[]>([]);
@@ -37,6 +38,7 @@ const Predictions: React.FC = () => {
   const [acknowledgeDisclaimer, setAcknowledgeDisclaimer] = useState(false);
   const [hasUsedFreeViewToday, setHasUsedFreeViewToday] = useState(false);
   const [purchasedPredictionIds, setPurchasedPredictionIds] = useState<Set<string>>(new Set());
+  const [showAuthGateModal, setShowAuthGateModal] = useState(false);
   const prevLocationRef = useRef<string>('');
 
   // Fetch user's purchases to check which predictions they have access to
@@ -444,6 +446,13 @@ const Predictions: React.FC = () => {
       currentSelectedLottery,
       match: userSelectedLottery === currentSelectedLottery
     });
+
+    // Allow guests to browse predictions, but require login/register to buy
+    if (!user) {
+      setSelectedPrediction(prediction);
+      setShowAuthGateModal(true);
+      return;
+    }
 
     if (isInTrial && userSelectedLottery === currentSelectedLottery) {
       // For trial users, directly show the prediction without payment
@@ -967,12 +976,7 @@ const Predictions: React.FC = () => {
                   )}
               </div>
 
-              {!user ? (
-                <div className="alert alert-info text-center">
-                  <i className="bi bi-info-circle me-2"></i>
-                  Please <a href="/register" className="alert-link">sign up</a> or <a href="/login" className="alert-link">login</a> to view predictions
-                </div>
-              ) : loading ? (
+              {loading ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading predictions...</span>
@@ -1293,6 +1297,52 @@ const Predictions: React.FC = () => {
             disabled={paymentLoading}
           >
             Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Guest purchase gate modal */}
+      <Modal
+        show={showAuthGateModal}
+        onHide={() => setShowAuthGateModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Sign in required</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-2">
+            You can browse predictions without an account, but to buy a prediction you need to sign in or create an account.
+          </p>
+          {selectedPrediction ? (
+            <p className="text-muted small mb-0">
+              Selected: <span className="fw-semibold">{selectedPrediction.lotteryDisplayName || selectedPrediction.lotteryType}</span>
+            </p>
+          ) : null}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setShowAuthGateModal(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="outline-primary"
+            onClick={() => {
+              const returnTo = location.pathname + location.search;
+              setShowAuthGateModal(false);
+              navigate('/register', { state: { from: returnTo, intent: 'purchase' } });
+            }}
+          >
+            Register
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              const returnTo = location.pathname + location.search;
+              setShowAuthGateModal(false);
+              navigate('/login', { state: { from: returnTo, intent: 'purchase' } });
+            }}
+          >
+            Login
           </Button>
         </Modal.Footer>
       </Modal>

@@ -843,65 +843,100 @@ router.get('/results/test', (req, res) => {
   res.json({ success: true, message: 'Results routes are working' });
 });
 
-// Helper: prediction ki draw date + time ab guzar chuki hai (past) ya nahi
-function isDrawInPast(prediction) {
-  if (!prediction || !prediction.drawDate) return false;
-  const drawDate = new Date(prediction.drawDate);
+// Helpers used by Announced Results page (public)
+function toDrawDateTimeMs(prediction) {
+  if (!prediction || !prediction.drawDate) return null;
+  const d = new Date(prediction.drawDate);
   const timeStr = (prediction.drawTime || '23:59').trim();
   const parts = timeStr.match(/^(\d{1,2}):(\d{2})/);
   if (parts) {
-    drawDate.setHours(parseInt(parts[1], 10), parseInt(parts[2], 10), 0, 0);
+    d.setHours(parseInt(parts[1], 10), parseInt(parts[2], 10), 0, 0);
   }
-  return Date.now() >= drawDate.getTime();
+  return d.getTime();
 }
 
 // @route   GET /api/admin/results/recent
-// @desc    Last N announced results for Announced Results page.
-//          Only returns results where prediction's draw date+time is in the past and has winning numbers.
+// @desc    Last N uploaded predictions for Announced Results page (no result).
+//          Source: Prediction collection (latest uploads).
+//          Only include predictions whose draw date+time is in the past.
 // @access  Public
 router.get('/results/recent', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 5, 50);
     const fetchLimit = Math.min(limit * 5, 100);
-    const results = await Result.find({})
-      .sort({ drawDate: -1, createdAt: -1 })
-      .limit(fetchLimit)
-      .populate('prediction');
+
+    // Get latest uploaded predictions (not dependent on results)
+    // NOTE: We keep these as Mongoose documents so we can call getViableNumbers()
+    const predictions = await Prediction.find({})
+      .sort({ createdAt: -1, drawDate: -1 })
+      .limit(fetchLimit);
+
     const payload = [];
-    for (const r of results) {
+    for (const p of predictions) {
       if (payload.length >= limit) break;
-      if (!r.prediction) continue;
-      if (!isDrawInPast(r.prediction)) continue; // draw abhi nahi hua — show mat karo
-      const doc = r.toObject ? r.toObject() : r;
-      const hasWhite = (doc.winningNumbers?.whiteBalls && doc.winningNumbers.whiteBalls.length > 0);
-      const hasRed = (doc.winningNumbers?.redBalls && doc.winningNumbers.redBalls.length > 0);
-      const hasSingle = (doc.winningNumbersSingle && doc.winningNumbersSingle.length > 0);
-      const hasPick3 = (doc.winningNumbersPick3 && doc.winningNumbersPick3.length > 0);
-      if (!hasWhite && !hasRed && !hasSingle && !hasPick3) continue;
-      const ourPrediction = typeof r.prediction.getViableNumbers === 'function'
-        ? r.prediction.getViableNumbers()
-        : null;
+      const pid = String(p._id);
+      const ourPrediction = typeof p.getViableNumbers === 'function' ? p.getViableNumbers() : null;
+      const pObj = p.toObject ? p.toObject() : p;
+      const drawDateTimeMs = toDrawDateTimeMs(pObj);
+      if (typeof drawDateTimeMs === 'number' && drawDateTimeMs > Date.now()) {
+        // draw abhi future me hai; show mat karo
+        continue;
+      }
+
       payload.push({
-        _id: doc._id,
-        lotteryType: doc.lotteryType,
-        drawDate: doc.drawDate,
-        winningNumbers: doc.winningNumbers,
-        winningNumbersSingle: doc.winningNumbersSingle,
-        winningNumbersPick3: doc.winningNumbersPick3,
-        jackpot: doc.jackpot,
+        predictionId: pid,
+        lotteryType: pObj.lotteryType,
+        lotteryDisplayName: pObj.lotteryDisplayName,
+        drawDate: pObj.drawDate,
+        drawTime: pObj.drawTime,
+        drawDateTimeMs,
         ourPrediction
       });
     }
-    res.json({
+
+    res.json({ success: true, data: { results: payload } });
+  } catch (error) {
+    console.error('Get recent predictions/results error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/admin/results/prediction/:id
+// @desc    Get a single past prediction for Past Predictions page (no result).
+// @access  Public
+router.get('/results/prediction/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid prediction ID format' });
+    }
+    const prediction = await Prediction.findById(id);
+    if (!prediction) {
+      return res.status(404).json({ success: false, message: 'Prediction not found' });
+    }
+    const pObj = prediction.toObject ? prediction.toObject() : prediction;
+    const drawDateTimeMs = toDrawDateTimeMs(pObj);
+    if (typeof drawDateTimeMs === 'number' && drawDateTimeMs > Date.now()) {
+      return res.status(400).json({ success: false, message: 'Prediction draw is not in the past yet' });
+    }
+    const ourPrediction = typeof prediction.getViableNumbers === 'function' ? prediction.getViableNumbers() : null;
+    return res.json({
       success: true,
-      data: { results: payload }
+      data: {
+        prediction: {
+          predictionId: String(prediction._id),
+          lotteryType: pObj.lotteryType,
+          lotteryDisplayName: pObj.lotteryDisplayName,
+          drawDate: pObj.drawDate,
+          drawTime: pObj.drawTime,
+          drawDateTimeMs,
+          ourPrediction
+        }
+      }
     });
   } catch (error) {
-    console.error('Get recent results error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    console.error('Get prediction error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

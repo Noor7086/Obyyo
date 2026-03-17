@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { LotteryType } from '../../types';
 import { walletService } from '../../services/walletService';
+import { apiService } from '../../services/api';
 import logo from '../../assets/logo.png';
 
 const Navbar: React.FC = () => {
@@ -11,9 +12,17 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPredictionsOpen, setIsPredictionsOpen] = useState(false);
+  const [isPastPredictionsOpen, setIsPastPredictionsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [pastPredictions, setPastPredictions] = useState<Array<{
+    predictionId: string;
+    lotteryType: string;
+    lotteryDisplayName?: string;
+    drawDate: string;
+    drawTime?: string;
+  }>>([]);
 
   // Check if we're on the homepage
   const isHomePage = location.pathname === '/';
@@ -27,6 +36,7 @@ const Navbar: React.FC = () => {
       const target = event.target as HTMLElement;
       if (!target.closest('.dropdown')) {
         setIsPredictionsOpen(false);
+        setIsPastPredictionsOpen(false);
         setIsUserMenuOpen(false);
       }
     };
@@ -37,11 +47,38 @@ const Navbar: React.FC = () => {
     };
   }, []);
 
+  // Fetch last 5 past predictions for dropdown (public)
+  useEffect(() => {
+    const fetchPastPredictions = async () => {
+      try {
+        const res = await apiService.get<{ success: boolean; data?: { results?: any[] } }>(
+          '/admin/results/recent?limit=5'
+        );
+        setPastPredictions(res?.data?.results ?? []);
+      } catch {
+        setPastPredictions([]);
+      }
+    };
+    fetchPastPredictions();
+  }, []);
+
   // Close mobile menu when clicking on nav links
   const closeMobileMenu = () => {
     setIsMenuOpen(false);
     setIsPredictionsOpen(false);
+    setIsPastPredictionsOpen(false);
     setIsUserMenuOpen(false);
+  };
+
+  const formatShortDateTime = (dateStr?: string, timeStr?: string) => {
+    try {
+      const d = dateStr ? new Date(dateStr) : null;
+      const dateLabel = d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+      const timeLabel = timeStr ? ` ${timeStr}` : '';
+      return `${dateLabel}${timeLabel}`.trim();
+    } catch {
+      return `${dateStr || ''}${timeStr ? ` ${timeStr}` : ''}`.trim();
+    }
   };
 
   // Fetch wallet balance
@@ -683,6 +720,15 @@ const Navbar: React.FC = () => {
                 Features
               </Link>
             </li>
+            <li className="nav-item">
+              <Link
+                className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'}`}
+                to="/how-it-works"
+                onClick={closeMobileMenu}
+              >
+                Guide
+              </Link>
+            </li>
             <li className={`nav-item dropdown ${isPredictionsOpen ? 'show' : ''}`}>
               <a
                 className={`nav-link dropdown-toggle ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'} ${isActive('/predictions') ? 'active' : ''}`}
@@ -712,25 +758,49 @@ const Navbar: React.FC = () => {
                 ))}
               </ul>
             </li>
-            <li className="nav-item">
-              <Link
-                className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'} ${isActive('/announced-results') ? 'active' : ''}`}
-                to="/announced-results"
-                onClick={closeMobileMenu}
+            <li className={`nav-item dropdown ${isPastPredictionsOpen ? 'show' : ''}`}>
+              <a
+                className={`nav-link dropdown-toggle ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'} ${isActive('/announced-results') ? 'active' : ''}`}
+                href="#"
+                role="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsPastPredictionsOpen(!isPastPredictionsOpen);
+                }}
+                aria-expanded={isPastPredictionsOpen}
               >
-               
+                <i className="bi bi-clock-history me-1"></i>
                 Past Predictions
-              </Link>
+              </a>
+              <ul className={`dropdown-menu ${isPastPredictionsOpen ? 'show' : ''}`}>
+                {pastPredictions.length === 0 ? (
+                  <li>
+                    <span className="dropdown-item text-muted small">No past predictions</span>
+                  </li>
+                ) : (
+                  pastPredictions.map((p) => (
+                    <li key={p.predictionId}>
+                      <Link
+                        className="dropdown-item"
+                        to={`/announced-results?predictionId=${p.predictionId}`}
+                        onClick={closeMobileMenu}
+                      >
+                        <i className="bi bi-dot me-2 text-primary"></i>
+                        <span className="me-2">{p.lotteryDisplayName || p.lotteryType}</span>
+                        <span className="text-muted small">({formatShortDateTime(p.drawDate, p.drawTime)})</span>
+                      </Link>
+                    </li>
+                  ))
+                )}
+                <li><hr className="dropdown-divider" /></li>
+                <li>
+                  <Link className="dropdown-item" to="/announced-results" onClick={closeMobileMenu}>
+                    View all
+                  </Link>
+                </li>
+              </ul>
             </li>
-            <li className="nav-item">
-              <Link
-                className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'}`}
-                to="/how-it-works"
-                onClick={closeMobileMenu}
-              >
-                Guide
-              </Link>
-            </li>
+
             <li className="nav-item">
               <Link
                 className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'}`}
