@@ -49,17 +49,17 @@ const Predictions: React.FC = () => {
           const purchases = await predictionService.getMyPurchases(1, 100);
           // Create a set of prediction IDs that user has purchased/viewed
           const purchasedIds = new Set<string>();
-          
+
           // Check if user has used their free view today
           const now = new Date();
           const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           let hasUsedFreeView = false;
-          
+
           purchases.forEach(purchase => {
             if (purchase.prediction?.id) {
               purchasedIds.add(purchase.prediction.id);
             }
-            
+
             // Check if there's a trial purchase from today (free view)
             if (purchase.paymentStatus === 'trial' || purchase.isTrialView) {
               const purchaseDate = new Date(purchase.createdAt);
@@ -69,7 +69,7 @@ const Predictions: React.FC = () => {
               }
             }
           });
-          
+
           setPurchasedPredictionIds(purchasedIds);
           setHasUsedFreeViewToday(hasUsedFreeView);
         } catch (error) {
@@ -480,12 +480,12 @@ const Predictions: React.FC = () => {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         let hasUsedFreeView = false;
-        
+
         purchases.forEach(purchase => {
           if (purchase.prediction?.id) {
             purchasedIds.add(purchase.prediction.id);
           }
-          
+
           // Check if there's a trial purchase from today (free view)
           if (purchase.paymentStatus === 'trial' || purchase.isTrialView) {
             const purchaseDate = new Date(purchase.createdAt);
@@ -495,7 +495,7 @@ const Predictions: React.FC = () => {
             }
           }
         });
-        
+
         setPurchasedPredictionIds(purchasedIds);
         setHasUsedFreeViewToday(hasUsedFreeView);
       } catch (error: any) {
@@ -520,10 +520,10 @@ const Predictions: React.FC = () => {
         setLoadingPredictionId(null);
 
         // Check if it's the "already viewed today" error (403 status or specific message)
-        const isAlreadyViewedError = error.response?.status === 403 || 
-          errorMessage.toLowerCase().includes('already viewed') || 
+        const isAlreadyViewedError = error.response?.status === 403 ||
+          errorMessage.toLowerCase().includes('already viewed') ||
           errorMessage.toLowerCase().includes('free prediction');
-        
+
         if (isAlreadyViewedError) {
           console.log('✅ Opening payment modal for already viewed prediction');
           // Mark that they've used their free view today
@@ -535,12 +535,12 @@ const Predictions: React.FC = () => {
             const now = new Date();
             const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             let hasUsedFreeView = false;
-            
+
             purchases.forEach(purchase => {
               if (purchase.prediction?.id) {
                 purchasedIds.add(purchase.prediction.id);
               }
-              
+
               // Check if there's a trial purchase from today (free view)
               if (purchase.paymentStatus === 'trial' || purchase.isTrialView) {
                 const purchaseDate = new Date(purchase.createdAt);
@@ -550,13 +550,13 @@ const Predictions: React.FC = () => {
                 }
               }
             });
-            
+
             setPurchasedPredictionIds(purchasedIds);
             setHasUsedFreeViewToday(hasUsedFreeView);
           } catch (purchaseError) {
             console.error('Error refreshing purchases:', purchaseError);
           }
-          
+
           // Instead of just showing error, allow them to purchase the prediction
           toast.success('You have already used your daily free prediction. You can purchase this prediction to view it.');
           // Open payment modal so they can purchase it
@@ -988,7 +988,7 @@ const Predictions: React.FC = () => {
                   <i className="bi bi-info-circle me-2"></i>
                   {trialMessage || (
                     <>
-                      <strong>No predictions available for {selectedLotteryData?.name || selectedLottery} at the moment.</strong>
+                      <strong>No available prediction of number to avoid for {selectedLotteryData?.name || selectedLottery}</strong>
                       <br />
                       <small>This could mean:</small>
                       <ul className="text-start mt-2" style={{ maxWidth: '400px', margin: '0 auto' }}>
@@ -1072,7 +1072,7 @@ const Predictions: React.FC = () => {
                                   const currentSelectedLottery = selectedLottery?.toLowerCase();
                                   const trialMatches = isInTrial && userSelectedLottery === currentSelectedLottery;
                                   const hasPurchased = purchasedPredictionIds.has(prediction.id);
-                                  
+
                                   // If user has purchased/viewed this prediction, show View button
                                   if (hasPurchased) {
                                     return (
@@ -1118,7 +1118,7 @@ const Predictions: React.FC = () => {
                                       </button>
                                     );
                                   }
-                                  
+
                                   // If trial user and hasn't used free view today AND hasn't purchased this prediction, show View More
                                   // Otherwise show Purchase button
                                   if (trialMatches && !hasUsedFreeViewToday && !hasPurchased) {
@@ -1142,7 +1142,7 @@ const Predictions: React.FC = () => {
                                       </button>
                                     );
                                   }
-                                  
+
                                   // Show Purchase button for all other cases
                                   // (trial user who used free view, or non-trial user, or already purchased)
                                   return (

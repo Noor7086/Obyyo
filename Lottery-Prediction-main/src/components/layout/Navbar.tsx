@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { LotteryType } from '../../types';
 import { walletService } from '../../services/walletService';
-import { apiService } from '../../services/api';
 import logo from '../../assets/logo.png';
 
 const Navbar: React.FC = () => {
@@ -16,13 +15,7 @@ const Navbar: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [pastPredictions, setPastPredictions] = useState<Array<{
-    predictionId: string;
-    lotteryType: string;
-    lotteryDisplayName?: string;
-    drawDate: string;
-    drawTime?: string;
-  }>>([]);
+
 
   // Check if we're on the homepage
   const isHomePage = location.pathname === '/';
@@ -47,20 +40,7 @@ const Navbar: React.FC = () => {
     };
   }, []);
 
-  // Fetch last 5 past predictions for dropdown (public)
-  useEffect(() => {
-    const fetchPastPredictions = async () => {
-      try {
-        const res = await apiService.get<{ success: boolean; data?: { results?: any[] } }>(
-          '/admin/results/recent?limit=5'
-        );
-        setPastPredictions(res?.data?.results ?? []);
-      } catch {
-        setPastPredictions([]);
-      }
-    };
-    fetchPastPredictions();
-  }, []);
+
 
   // Close mobile menu when clicking on nav links
   const closeMobileMenu = () => {
@@ -68,17 +48,6 @@ const Navbar: React.FC = () => {
     setIsPredictionsOpen(false);
     setIsPastPredictionsOpen(false);
     setIsUserMenuOpen(false);
-  };
-
-  const formatShortDateTime = (dateStr?: string, timeStr?: string) => {
-    try {
-      const d = dateStr ? new Date(dateStr) : null;
-      const dateLabel = d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
-      const timeLabel = timeStr ? ` ${timeStr}` : '';
-      return `${dateLabel}${timeLabel}`.trim();
-    } catch {
-      return `${dateStr || ''}${timeStr ? ` ${timeStr}` : ''}`.trim();
-    }
   };
 
   // Fetch wallet balance
@@ -773,29 +742,22 @@ const Navbar: React.FC = () => {
                 Past Predictions
               </a>
               <ul className={`dropdown-menu ${isPastPredictionsOpen ? 'show' : ''}`}>
-                {pastPredictions.length === 0 ? (
-                  <li>
-                    <span className="dropdown-item text-muted small">No past predictions</span>
+                {lotteryTypes.map((lottery) => (
+                  <li key={lottery.type}>
+                    <Link
+                      className="dropdown-item py-2"
+                      to={`/announced-results?lottery=${lottery.type}`}
+                      onClick={closeMobileMenu}
+                    >
+                      <i className="bi bi-clock-history me-2 text-primary"></i>
+                      <span className="fw-medium text-dark">{lottery.name}</span>
+                    </Link>
                   </li>
-                ) : (
-                  pastPredictions.map((p) => (
-                    <li key={p.predictionId}>
-                      <Link
-                        className="dropdown-item"
-                        to={`/announced-results?predictionId=${p.predictionId}`}
-                        onClick={closeMobileMenu}
-                      >
-                        <i className="bi bi-dot me-2 text-primary"></i>
-                        <span className="me-2">{p.lotteryDisplayName || p.lotteryType}</span>
-                        <span className="text-muted small">({formatShortDateTime(p.drawDate, p.drawTime)})</span>
-                      </Link>
-                    </li>
-                  ))
-                )}
-                <li><hr className="dropdown-divider" /></li>
+                ))}
+                <li><hr className="dropdown-divider my-2" /></li>
                 <li>
-                  <Link className="dropdown-item" to="/announced-results" onClick={closeMobileMenu}>
-                    View all
+                  <Link className="dropdown-item text-center text-primary fw-medium" to="/announced-results" onClick={closeMobileMenu}>
+                    View all results
                   </Link>
                 </li>
               </ul>
@@ -940,7 +902,7 @@ const Navbar: React.FC = () => {
                       }}
                     >
                       <i className="bi bi-trophy me-2 text-danger"></i>
-                      Announced Results
+                      Past Predictions
                     </Link>
                   </li>
                   <li>

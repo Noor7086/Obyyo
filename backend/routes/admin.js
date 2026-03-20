@@ -862,12 +862,17 @@ function toDrawDateTimeMs(prediction) {
 // @access  Public
 router.get('/results/recent', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 5, 50);
-    const fetchLimit = Math.min(limit * 5, 100);
+    const limit = Math.min(parseInt(req.query.limit) || 5, 100);
+    const fetchLimit = Math.min(limit * 5, 250);
+    
+    const query = {};
+    if (req.query.lotteryType) {
+      query.lotteryType = req.query.lotteryType.toLowerCase();
+    }
 
     // Get latest uploaded predictions (not dependent on results)
     // NOTE: We keep these as Mongoose documents so we can call getViableNumbers()
-    const predictions = await Prediction.find({})
+    const predictions = await Prediction.find(query)
       .sort({ createdAt: -1, drawDate: -1 })
       .limit(fetchLimit);
 

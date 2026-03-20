@@ -30,6 +30,7 @@ const AnnouncedResults: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const selectedPredictionId = searchParams.get('predictionId');
+  const selectedLotteryType = searchParams.get('lottery');
   const [selected, setSelected] = useState<RecentPredictionRow | null>(null);
 
   const fetchRecent = useCallback(async () => {
@@ -46,9 +47,12 @@ const AnnouncedResults: React.FC = () => {
         return;
       }
 
-      const res = await apiService.get<{ success: boolean; data?: { results?: RecentPredictionRow[] } }>(
-        `/admin/results/recent?limit=${TOTAL_RESULTS}`
-      );
+      let url = `/admin/results/recent?limit=${TOTAL_RESULTS}`;
+      if (selectedLotteryType) {
+        url += `&lotteryType=${selectedLotteryType}`;
+      }
+
+      const res = await apiService.get<{ success: boolean; data?: { results?: RecentPredictionRow[] } }>(url);
       const raw = res?.data?.results ?? [];
       const now = Date.now();
       setResults(raw.filter(r => (typeof r.drawDateTimeMs !== 'number') || r.drawDateTimeMs <= now));
@@ -59,7 +63,7 @@ const AnnouncedResults: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedPredictionId]);
+  }, [selectedPredictionId, selectedLotteryType]);
 
   // Initial load + refetch when user comes back to this tab (so admin changes/removals show)
   useEffect(() => {
@@ -90,32 +94,79 @@ const AnnouncedResults: React.FC = () => {
     return LOTTERY_NAMES[key] || { name: lotteryType, icon: '🎰' };
   };
 
-  const renderOurPrediction = (ourPrediction: OurPrediction) => {
+  const renderOurPrediction = (ourPrediction: OurPrediction, lotteryType: string = '') => {
     if (!ourPrediction) return <span className="text-muted small">—</span>;
+    
+    const lt = (lotteryType || '').toLowerCase();
+    
+    let wLabel = 'Balls';
+    let rLabel = 'Balls';
+
+    if (lt === 'powerball') {
+      rLabel = 'Powerballs';
+    } else if (lt === 'lottoamerica') {
+      rLabel = 'Star Balls';
+    } else if (lt === 'megamillion') {
+      rLabel = 'Mega Balls';
+    }
+
+    const isSpecial = ['powerball', 'megamillion', 'lottoamerica'].includes(lt);
+
+    const wClass = 'bg-danger rounded-circle shadow-sm';
+    const rClass = isSpecial ? 'bg-primary rounded-circle shadow-sm' : 'bg-danger rounded-circle shadow-sm';
+    
+    const ballStyle = {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '32px',
+      height: '32px',
+      fontSize: '0.9rem',
+      fontWeight: 'bold' as const,
+      lineHeight: 1
+    };
+
     if (Array.isArray(ourPrediction)) {
       return (
-        <div className="d-flex flex-wrap gap-2">
-          {ourPrediction.map((n, i) => (
-            <span key={i} className="badge bg-secondary px-2 py-1">{n}</span>
-          ))}
+        <div>
+          <span className="text-muted fw-bold d-block mb-1 text-center" style={{ fontSize: '0.75rem' }}>Balls</span>
+          <div className="d-flex flex-wrap gap-2">
+            {ourPrediction.map((n, i) => (
+              <span key={i} className={`badge ${wClass}`} style={ballStyle}>{n}</span>
+            ))}
+          </div>
         </div>
       );
     }
     const w = ourPrediction.whiteBalls ?? [];
     const r = ourPrediction.redBalls ?? [];
     return (
-      <div className="d-flex flex-wrap align-items-center gap-2">
-        {w.map((n, i) => (
-          <span key={i} className="badge bg-secondary px-2 py-1">{n}</span>
-        ))}
-        {r.length ? (
+      <div className="d-flex flex-wrap align-items-end gap-3">
+        {w.length > 0 && (
+          <div>
+            <span className="text-muted fw-bold d-block mb-1 text-center" style={{ fontSize: '0.75rem' }}>{wLabel}</span>
+            <div className="d-flex flex-wrap gap-2">
+              {w.map((n, i) => (
+                <span key={`w-${i}`} className={`badge ${wClass}`} style={ballStyle}>{n}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {r.length > 0 && (
           <>
-            <span className="text-muted small">+</span>
-            {r.map((n, i) => (
-              <span key={i} className="badge bg-dark px-2 py-1">{n}</span>
-            ))}
+            <div className="d-flex align-items-center" style={{ height: '32px' }}>
+              <span className="text-muted small fw-bold">+</span>
+            </div>
+            <div>
+              <span className="text-muted fw-bold d-block mb-1 text-center" style={{ fontSize: '0.75rem' }}>{rLabel}</span>
+              <div className="d-flex flex-wrap gap-2">
+                {r.map((n, i) => (
+                  <span key={`r-${i}`} className={`badge ${rClass}`} style={ballStyle}>{n}</span>
+                ))}
+              </div>
+            </div>
           </>
-        ) : null}
+        )}
       </div>
     );
   };
@@ -123,10 +174,22 @@ const AnnouncedResults: React.FC = () => {
   return (
     <Container className="py-4" style={{ marginTop: '4rem' }}>
       <div className="text-center mb-4">
-        <h1 className="display-6 fw-bold gradient-text">Announced Results</h1>
-        <p className="text-muted mb-0">
-          Last {TOTAL_RESULTS} uploaded predictions.
-        </p>
+        <h1 className="display-6 fw-bold gradient-text">
+          {selectedLotteryType 
+            ? `Past Predictions for ${LOTTERY_NAMES[selectedLotteryType.toLowerCase()]?.name || selectedLotteryType}` 
+            : 'Past Predictions'}
+        </h1>
+        <div className="mt-4 mb-4 text-start p-4 rounded mx-auto text-muted" style={{ maxWidth: '800px', fontSize: '1.05rem', lineHeight: '1.6', backgroundColor: '#f8f9fa' }}>
+          <p className="mb-3">
+            The difficulties of winning in any lottery draw lies in the number of balls in the concern lottery pot/drum or machine. The more the balls, the lower the odds of winning. While the fewer the balls, the higher the odds of winning.
+          </p>
+          <p className="mb-3">
+            Obyyo’s mission is to identify balls which based on analysis stand a lower probability of being drawn in the next draw of any lottery, thereby reducing the total number of balls in the lottery pot, and increasing the odds of winning.
+          </p>
+          <p className="mb-0 fw-medium text-dark">
+            Here are the last 5 predictions of numbers which were determined to have a lower probability of being drawn on the concern lottery and date.
+          </p>
+        </div>
         {selectedPredictionId && (
           <div className="mt-2">
             <Link to="/announced-results" className="small text-decoration-none">
@@ -172,8 +235,8 @@ const AnnouncedResults: React.FC = () => {
                       </div>
                       <div className="row g-2 small">
                         <div className="col-12">
-                          <span className="text-muted fw-semibold d-block mb-1">Our prediction</span>
-                          {renderOurPrediction(selected.ourPrediction ?? null)}
+                          <span className="text-muted fw-semibold d-block mb-1">Our predictions for numbers to avoid</span>
+                          {renderOurPrediction(selected.ourPrediction ?? null, selected.lotteryType)}
                         </div>
                       </div>
                     </li>
@@ -203,8 +266,8 @@ const AnnouncedResults: React.FC = () => {
                       </div>
                       <div className="row g-2 small">
                         <div className="col-12">
-                          <span className="text-muted fw-semibold d-block mb-1">Our prediction</span>
-                          {renderOurPrediction(result.ourPrediction ?? null)}
+                          <span className="text-muted fw-semibold d-block mb-1">Our predictions for numbers to avoid</span>
+                          {renderOurPrediction(result.ourPrediction ?? null, result.lotteryType)}
                         </div>
                       </div>
                     </li>
