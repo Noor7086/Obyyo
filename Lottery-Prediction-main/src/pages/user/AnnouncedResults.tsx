@@ -23,6 +23,11 @@ interface RecentPredictionRow {
   drawTime?: string;
   drawDateTimeMs?: number | null;
   ourPrediction?: OurPrediction;
+  actualResult?: {
+    winningNumbers?: { whiteBalls?: number[]; redBalls?: number[] };
+    winningNumbersSingle?: number[];
+    winningNumbersPick3?: number[];
+  } | null;
 }
 
 const AnnouncedResults: React.FC = () => {
@@ -92,6 +97,48 @@ const AnnouncedResults: React.FC = () => {
   const getLotteryLabel = (lotteryType: string) => {
     const key = (lotteryType || '').toLowerCase();
     return LOTTERY_NAMES[key] || { name: lotteryType, icon: '🎰' };
+  };
+
+  const hasValidPrediction = (pred: OurPrediction | null | undefined): boolean => {
+    if (!pred) return false;
+    if (Array.isArray(pred)) return pred.length > 0;
+    return (pred.whiteBalls && pred.whiteBalls.length > 0) || (pred.redBalls && pred.redBalls.length > 0) ? true : false;
+  };
+
+  const calculateAccuracy = (ourPrediction: OurPrediction | null | undefined, actualResult: any, lotteryType: string): number | null => {
+    if (!ourPrediction || !actualResult || !hasValidPrediction(ourPrediction)) return null;
+
+    let totalPredicted = 0;
+    let mistakes = 0;
+
+    const isDoubleSelection = ['powerball', 'megamillion', 'lottoamerica'].includes(lotteryType.toLowerCase());
+
+    if (isDoubleSelection) {
+      const predWhite = (ourPrediction as any).whiteBalls || [];
+      const predRed = (ourPrediction as any).redBalls || [];
+      
+      const actWhite = actualResult.winningNumbers?.whiteBalls || [];
+      const actRed = actualResult.winningNumbers?.redBalls || [];
+
+      totalPredicted = predWhite.length + predRed.length;
+      if (totalPredicted === 0) return null;
+
+      predWhite.forEach((num: number) => { if (actWhite.includes(num)) mistakes++; });
+      predRed.forEach((num: number) => { if (actRed.includes(num)) mistakes++; });
+    } else {
+      const predArr = Array.isArray(ourPrediction) ? ourPrediction : [];
+      const actArr = actualResult.winningNumbersSingle || actualResult.winningNumbersPick3 || [];
+
+      totalPredicted = predArr.length;
+      if (totalPredicted === 0) return null;
+
+      predArr.forEach((num: number) => { if (actArr.includes(num)) mistakes++; });
+    }
+
+    if (totalPredicted === 0) return null;
+
+    const correct = totalPredicted - mistakes;
+    return Math.max(0, Math.round((correct / totalPredicted) * 100));
   };
 
   const renderOurPrediction = (ourPrediction: OurPrediction, lotteryType: string = '') => {
@@ -238,6 +285,32 @@ const AnnouncedResults: React.FC = () => {
                           <span className="text-muted fw-semibold d-block mb-1">Our predictions for numbers to avoid</span>
                           {renderOurPrediction(selected.ourPrediction ?? null, selected.lotteryType)}
                         </div>
+                        {selected.actualResult && hasValidPrediction(selected.actualResult.winningNumbers || selected.actualResult.winningNumbersSingle || selected.actualResult.winningNumbersPick3) && (
+                          <div className="col-12 mt-3 pt-3 border-top">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                              <span className="text-muted fw-semibold d-block">Result</span>
+                              {(() => {
+                                const acc = calculateAccuracy(selected.ourPrediction, selected.actualResult, selected.lotteryType);
+                                if (acc !== null) {
+                                  return (
+                                    <span className="badge bg-success">
+                                      <i className="bi bi-bullseye me-1"></i>
+                                      Accuracy: {acc}%
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                            {renderOurPrediction(
+                              selected.actualResult.winningNumbers || 
+                              selected.actualResult.winningNumbersSingle || 
+                              selected.actualResult.winningNumbersPick3 || 
+                              null, 
+                              selected.lotteryType
+                            )}
+                          </div>
+                        )}
                       </div>
                     </li>
                   );
@@ -269,6 +342,32 @@ const AnnouncedResults: React.FC = () => {
                           <span className="text-muted fw-semibold d-block mb-1">Our predictions for numbers to avoid</span>
                           {renderOurPrediction(result.ourPrediction ?? null, result.lotteryType)}
                         </div>
+                        {result.actualResult && hasValidPrediction(result.actualResult.winningNumbers || result.actualResult.winningNumbersSingle || result.actualResult.winningNumbersPick3) && (
+                          <div className="col-12 mt-3 pt-3 border-top">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                              <span className="text-muted fw-semibold d-block">Result</span>
+                              {(() => {
+                                const acc = calculateAccuracy(result.ourPrediction, result.actualResult, result.lotteryType);
+                                if (acc !== null) {
+                                  return (
+                                    <span className="badge bg-success">
+                                      <i className="bi bi-bullseye me-1"></i>
+                                      Accuracy: {acc}%
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                            {renderOurPrediction(
+                              result.actualResult.winningNumbers || 
+                              result.actualResult.winningNumbersSingle || 
+                              result.actualResult.winningNumbersPick3 || 
+                              null, 
+                              result.lotteryType
+                            )}
+                          </div>
+                        )}
                       </div>
                     </li>
                   );

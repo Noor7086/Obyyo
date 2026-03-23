@@ -961,7 +961,7 @@ const Predictions: React.FC = () => {
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <h5 className="fw-bold mb-0">
                   <i className="bi bi-calendar-event me-2"></i>
-                  Available Predictions for {selectedLotteryData?.name}
+                  Available prediction of numbers to avoid for {selectedLotteryData?.name}
                 </h5>
                 {(() => {
                   const isInTrial = user?.isInTrial || (user?.trialEndDate && new Date(user.trialEndDate) >= new Date());

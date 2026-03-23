@@ -888,6 +888,8 @@ router.get('/results/recent', async (req, res) => {
         continue;
       }
 
+      const resultDoc = await Result.findOne({ prediction: p._id }).lean();
+
       payload.push({
         predictionId: pid,
         lotteryType: pObj.lotteryType,
@@ -895,7 +897,12 @@ router.get('/results/recent', async (req, res) => {
         drawDate: pObj.drawDate,
         drawTime: pObj.drawTime,
         drawDateTimeMs,
-        ourPrediction
+        ourPrediction,
+        actualResult: resultDoc ? {
+          winningNumbers: resultDoc.winningNumbers,
+          winningNumbersSingle: resultDoc.winningNumbersSingle,
+          winningNumbersPick3: resultDoc.winningNumbersPick3
+        } : null
       });
     }
 
@@ -925,6 +932,7 @@ router.get('/results/prediction/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Prediction draw is not in the past yet' });
     }
     const ourPrediction = typeof prediction.getViableNumbers === 'function' ? prediction.getViableNumbers() : null;
+    const resultDoc = await Result.findOne({ prediction: prediction._id }).lean();
     return res.json({
       success: true,
       data: {
@@ -935,7 +943,12 @@ router.get('/results/prediction/:id', async (req, res) => {
           drawDate: pObj.drawDate,
           drawTime: pObj.drawTime,
           drawDateTimeMs,
-          ourPrediction
+          ourPrediction,
+          actualResult: resultDoc ? {
+            winningNumbers: resultDoc.winningNumbers,
+            winningNumbersSingle: resultDoc.winningNumbersSingle,
+            winningNumbersPick3: resultDoc.winningNumbersPick3
+          } : null
         }
       }
     });
