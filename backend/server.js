@@ -7,6 +7,10 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import dns from 'dns';
+
+// Force DNS resolution to use Google DNS
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 // Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);

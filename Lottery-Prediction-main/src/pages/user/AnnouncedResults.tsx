@@ -99,6 +99,29 @@ const AnnouncedResults: React.FC = () => {
     return LOTTERY_NAMES[key] || { name: lotteryType, icon: '🎰' };
   };
 
+  const getActualWinningNumbers = (actualResult: any, lotteryType: string) => {
+    if (!actualResult) return null;
+    const lt = (lotteryType || '').toLowerCase();
+    
+    if (lt === 'gopher5') {
+      return actualResult.winningNumbersSingle && actualResult.winningNumbersSingle.length > 0 
+        ? actualResult.winningNumbersSingle : null;
+    }
+    if (lt === 'pick3') {
+      return actualResult.winningNumbersPick3 && actualResult.winningNumbersPick3.length > 0 
+        ? actualResult.winningNumbersPick3 : null;
+    }
+    
+    // For powerball, megamillion, lottoamerica
+    if (actualResult.winningNumbers && 
+        ((actualResult.winningNumbers.whiteBalls && actualResult.winningNumbers.whiteBalls.length > 0) || 
+         (actualResult.winningNumbers.redBalls && actualResult.winningNumbers.redBalls.length > 0))) {
+      return actualResult.winningNumbers;
+    }
+    
+    return null;
+  };
+
   const hasValidPrediction = (pred: OurPrediction | null | undefined): boolean => {
     if (!pred) return false;
     if (Array.isArray(pred)) return pred.length > 0;
@@ -110,6 +133,7 @@ const AnnouncedResults: React.FC = () => {
 
     let totalPredicted = 0;
     let mistakes = 0;
+    let totalDrawn = 0;
 
     const isDoubleSelection = ['powerball', 'megamillion', 'lottoamerica'].includes(lotteryType.toLowerCase());
 
@@ -117,28 +141,40 @@ const AnnouncedResults: React.FC = () => {
       const predWhite = (ourPrediction as any).whiteBalls || [];
       const predRed = (ourPrediction as any).redBalls || [];
       
-      const actWhite = actualResult.winningNumbers?.whiteBalls || [];
-      const actRed = actualResult.winningNumbers?.redBalls || [];
+      const actObj = getActualWinningNumbers(actualResult, lotteryType) || { whiteBalls: [], redBalls: [] };
+      const actWhite = (actObj as any).whiteBalls || [];
+      const actRed = (actObj as any).redBalls || [];
 
       totalPredicted = predWhite.length + predRed.length;
+      totalDrawn = actWhite.length + actRed.length;
+      
       if (totalPredicted === 0) return null;
 
       predWhite.forEach((num: number) => { if (actWhite.includes(num)) mistakes++; });
       predRed.forEach((num: number) => { if (actRed.includes(num)) mistakes++; });
     } else {
       const predArr = Array.isArray(ourPrediction) ? ourPrediction : [];
-      const actArr = actualResult.winningNumbersSingle || actualResult.winningNumbersPick3 || [];
+      const actArr = getActualWinningNumbers(actualResult, lotteryType) || [];
 
       totalPredicted = predArr.length;
+      totalDrawn = Array.isArray(actArr) ? actArr.length : 0;
+      
       if (totalPredicted === 0) return null;
 
-      predArr.forEach((num: number) => { if (actArr.includes(num)) mistakes++; });
+      predArr.forEach((num: number) => { if (Array.isArray(actArr) && actArr.includes(num)) mistakes++; });
     }
 
     if (totalPredicted === 0) return null;
 
-    const correct = totalPredicted - mistakes;
-    return Math.max(0, Math.round((correct / totalPredicted) * 100));
+    // Use the max of total drawn numbers and total predicted numbers
+    // This perfectly matches the requested formula:
+    // 1 mistake out of 10 predicted -> 90% (base = 10)
+    // 1 mistake out of 2 predicted against 5 drawn -> 80% (base = 5)
+    const baseTotal = Math.max(totalPredicted, totalDrawn);
+    if (baseTotal === 0) return 0;
+
+    const correct = baseTotal - mistakes;
+    return Math.max(0, Math.round((correct / baseTotal) * 100));
   };
 
   const renderOurPrediction = (ourPrediction: OurPrediction, lotteryType: string = '') => {
@@ -285,7 +321,7 @@ const AnnouncedResults: React.FC = () => {
                           <span className="text-muted fw-semibold d-block mb-1">Our predictions for numbers to avoid</span>
                           {renderOurPrediction(selected.ourPrediction ?? null, selected.lotteryType)}
                         </div>
-                        {selected.actualResult && hasValidPrediction(selected.actualResult.winningNumbers || selected.actualResult.winningNumbersSingle || selected.actualResult.winningNumbersPick3) && (
+                        {selected.actualResult && hasValidPrediction(getActualWinningNumbers(selected.actualResult, selected.lotteryType)) && (
                           <div className="col-12 mt-3 pt-3 border-top">
                             <div className="d-flex justify-content-between align-items-center mb-1">
                               <span className="text-muted fw-semibold d-block">Result</span>
@@ -303,10 +339,7 @@ const AnnouncedResults: React.FC = () => {
                               })()}
                             </div>
                             {renderOurPrediction(
-                              selected.actualResult.winningNumbers || 
-                              selected.actualResult.winningNumbersSingle || 
-                              selected.actualResult.winningNumbersPick3 || 
-                              null, 
+                              getActualWinningNumbers(selected.actualResult, selected.lotteryType),
                               selected.lotteryType
                             )}
                           </div>
@@ -342,7 +375,7 @@ const AnnouncedResults: React.FC = () => {
                           <span className="text-muted fw-semibold d-block mb-1">Our predictions for numbers to avoid</span>
                           {renderOurPrediction(result.ourPrediction ?? null, result.lotteryType)}
                         </div>
-                        {result.actualResult && hasValidPrediction(result.actualResult.winningNumbers || result.actualResult.winningNumbersSingle || result.actualResult.winningNumbersPick3) && (
+                        {result.actualResult && hasValidPrediction(getActualWinningNumbers(result.actualResult, result.lotteryType)) && (
                           <div className="col-12 mt-3 pt-3 border-top">
                             <div className="d-flex justify-content-between align-items-center mb-1">
                               <span className="text-muted fw-semibold d-block">Result</span>
@@ -360,10 +393,7 @@ const AnnouncedResults: React.FC = () => {
                               })()}
                             </div>
                             {renderOurPrediction(
-                              result.actualResult.winningNumbers || 
-                              result.actualResult.winningNumbersSingle || 
-                              result.actualResult.winningNumbersPick3 || 
-                              null, 
+                              getActualWinningNumbers(result.actualResult, result.lotteryType),
                               result.lotteryType
                             )}
                           </div>
