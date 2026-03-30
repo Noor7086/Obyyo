@@ -96,28 +96,38 @@ const Features: React.FC = () => {
   const lotteryTypes = [
     {
       name: "Powerball",
+      code: "powerball",
       description: "America's biggest lottery with jackpots starting at $20 million",
-      features: ["5 white balls + Powerball", "Draw is held three times a week", "Multi-state participation"]
+      features: ["5 Red balls + 1 Blue Powerball", "Draw is held three times a week", "Multi-state participation"],
+      color: "danger"
     },
     {
       name: "Mega Millions",
+      code: "megamillion",
       description: "Another major lottery with massive jackpots and frequent draws",
-      features: ["5 white balls + Mega Ball", "Twice weekly draws", "Cross-state play"]
+      features: ["5 Red balls + 1 Blue Mega Ball", "Twice weekly draws", "Cross-state play"],
+      color: "info"
     },
     {
       name: "Lotto America",
+      code: "lottoamerica",
       description: "Regional lottery with good odds and regular jackpots",
-      features: ["5 white balls + Star Ball", "Draw is held three times a week", "Multi-state game"]
+      features: ["5 Red balls + 1 Blue Star Ball", "Draw is held three times a week", "Multi-state game"],
+      color: "warning"
     },
     {
       name: "Gopher 5",
+      code: "gopher5",
       description: "Minnesota's state lottery with daily draws",
-      features: ["5 numbers from 1-47", "Draw is held three times a week", "State-specific game"]
+      features: ["5 Red balls from 1-47", "Draw is held three times a week", "State-specific game"],
+      color: "success"
     },
     {
       name: "Pick 3",
+      code: "pick3",
       description: "Simple 3-digit lottery with multiple daily draws",
-      features: ["3 numbers 0-9", "Multiple daily draws", "Various play options"]
+      features: ["3 Red balls from 0-9", "Multiple daily draws", "Various play options"],
+      color: "primary"
     }
   ];
 
@@ -126,8 +136,8 @@ const Features: React.FC = () => {
       {/* Header Section */}
       <Row className="mb-5">
         <Col className="text-center">
-          <h1 className="display-4 fw-bold mb-4">Powerful Features for Lottery Success</h1>
-          <p className="lead text-muted">
+          <h1 className="display-4 fw-bold mb-4 text-gradient">Powerful Features for Lottery Success</h1>
+          <p className="lead text-muted mx-auto" style={{ maxWidth: '700px' }}>
             Discover the comprehensive tools and features that make our lottery prediction platform reliable and effective.
           </p>
         </Col>
@@ -144,23 +154,22 @@ const Features: React.FC = () => {
       <Row className="g-4 mb-5">
         {features.map((feature, index) => (
           <Col lg={6} key={index}>
-            <Card className="h-100 shadow-sm border-0">
+            <Card className="h-100 shadow-custom border-0 hover-lift">
               <Card.Body className="p-4">
                 <div className="d-flex align-items-start">
-                  <div className="me-3" style={{ fontSize: '2.5rem' }}>
+                  <div className="me-4 p-3 rounded-circle bg-light d-flex align-items-center justify-content-center" style={{ fontSize: '2.2rem', width: '80px', height: '80px', boxShadow: 'var(--shadow-sm)' }}>
                     {feature.icon}
                   </div>
                   <div className="flex-grow-1">
-                    <h4 className="card-title mb-3">{feature.title}</h4>
-                    <p className="text-muted mb-3">{feature.description}</p>
-                    <ul className="list-unstyled">
+                    <h4 className="fw-bold mb-3">{feature.title}</h4>
+                    <p className="text-muted mb-4">{feature.description}</p>
+                    <div className="d-flex flex-wrap gap-2">
                       {feature.benefits.map((benefit, idx) => (
-                        <li key={idx} className="mb-1">
-                          <Badge bg="light" text="dark" className="me-2">✓</Badge>
-                          {benefit}
-                        </li>
+                        <Badge key={idx} bg="light" text="primary" className="px-3 py-2 border rounded-pill fw-medium">
+                          <span className="me-1">✓</span> {benefit}
+                        </Badge>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 </div>
               </Card.Body>
@@ -170,60 +179,69 @@ const Features: React.FC = () => {
       </Row>
 
       {/* Additional Features Section */}
-      <Row className="mb-5">
-        <Col className="text-center mb-4">
-          <h2 className="h3 fw-bold">Additional Features</h2>
-          <p className="text-muted">More tools to enhance your lottery experience</p>
-        </Col>
-      </Row>
+      <div className="py-5 bg-light rounded-4 mb-5 shadow-sm px-4">
+        <Row className="mb-5 text-center">
+          <Col lg={8} className="mx-auto">
+            <h2 className="fw-bold mb-3">Additional Features</h2>
+            <p className="text-muted">More tools to enhance your lottery experience</p>
+          </Col>
+        </Row>
 
-      <Row className="g-3 mb-5">
-        {additionalFeatures.map((feature, index) => (
-          <Col md={6} lg={4} key={index}>
-            <Card className="h-100 border-0 bg-light">
-              <Card.Body className="text-center p-4">
-                <div className="text-primary mb-3" style={{ fontSize: '2rem' }}>
+        <Row className="g-4">
+          {additionalFeatures.map((feature, index) => (
+            <Col md={6} lg={4} key={index}>
+              <div className="p-4 h-100 text-center transition-all bg-white rounded-4 shadow-sm hover-up">
+                <div className="text-primary mb-3 mx-auto d-flex align-items-center justify-content-center" style={{ fontSize: '2.5rem', width: '60px', height: '60px' }}>
                   {feature.icon}
                 </div>
-                <h6 className="card-title">{feature.title}</h6>
+                <h5 className="fw-bold mb-3">{feature.title}</h5>
                 <p className="text-muted small mb-0">{feature.description}</p>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </div>
 
       {/* Supported Lotteries Section */}
-      <Row className="mb-5">
-        <Col className="text-center mb-4">
-          <h2 className="h3 fw-bold">Supported Lotteries</h2>
-          <p className="text-muted">We provide predictions for all major lottery games</p>
+      <Row className="mb-5 text-center pt-5">
+        <Col lg={8} className="mx-auto">
+          <Badge bg="primary" className="px-3 py-2 mb-3 rounded-pill text-uppercase tracking-wider fw-bold">Gaming Support</Badge>
+          <h2 className="display-5 fw-bold mb-3">Supported Lotteries</h2>
+          <p className="lead text-muted">We provide accurate predictions for all major lottery games using historical analysis.</p>
         </Col>
       </Row>
 
-      <Row className="g-4">
+      <Row className="g-4 justify-content-center">
         {lotteryTypes.map((lottery, index) => (
-          <Col lg={6} key={index}>
-            <Card className="h-100 border-0 shadow-sm">
-              <Card.Body className="p-4">
-                <h5 className="card-title text-primary mb-3">{lottery.name}</h5>
-                <p className="text-muted mb-3">{lottery.description}</p>
-                <div>
-                  <h6 className="small fw-bold text-uppercase mb-2">Game Features:</h6>
-                  <ul className="list-unstyled">
+          <Col lg={4} md={6} key={index}>
+            <Card className="h-100 border-0 shadow-custom-md overflow-hidden premium-lottery-card">
+              <Card.Body className="p-5 text-center">
+                <h3 className="fw-bold mb-3">{lottery.name}</h3>
+                <p className="text-muted mb-4">{lottery.description}</p>
+                
+                <div className="mb-4">
+                  <h6 className="small fw-bold text-uppercase mb-3 opacity-50">Game Features</h6>
+                  <ul className="list-unstyled mb-0 d-flex flex-column gap-2">
                     {lottery.features.map((feature, idx) => (
-                      <li key={idx} className="mb-1">
-                        <Badge bg="outline-primary" className="me-2">•</Badge>
+                      <li key={idx} className="small fw-medium text-secondary">
                         {feature}
                       </li>
                     ))}
                   </ul>
                 </div>
+
+                <a 
+                  href={`/predictions?lottery=${lottery.code}`}
+                  className={`btn btn-lg w-100 btn-outline-lottery-${lottery.color} mt-2`}
+                >
+                  Live Predictions Available
+                </a>
               </Card.Body>
             </Card>
           </Col>
         ))}
       </Row>
+
 
       {/* Call to Action */}
       <Row className="mt-5">

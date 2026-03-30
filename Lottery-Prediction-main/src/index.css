@@ -8294,3 +8294,78 @@ html {
   }
 }
 
+/* Premium Lottery Cards & Buttons */
+.premium-lottery-card {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  border-radius: var(--radius-2xl) !important;
+  background: white !important;
+}
+
+.premium-lottery-card:hover {
+  transform: translateY(-12px) !important;
+  box-shadow: 0 40px 60px -15px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-lg {
+  padding: 1rem 1.5rem !important;
+  font-weight: 700 !important;
+  border-radius: var(--radius-lg) !important;
+  font-size: 1rem !important;
+  letter-spacing: 0.025em;
+}
+
+/* Elegant Outline Buttons */
+.btn-outline-lottery-danger {
+  border: 2px solid #fee2e2 !important;
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+}
+.btn-outline-lottery-danger:hover {
+  background: #dc2626 !important;
+  color: white !important;
+  border-color: #dc2626 !important;
+}
+
+.btn-outline-lottery-info {
+  border: 2px solid #e0f2fe !important;
+  color: #0284c7 !important;
+  background: #f0f9ff !important;
+}
+.btn-outline-lottery-info:hover {
+  background: #0284c7 !important;
+  color: white !important;
+  border-color: #0284c7 !important;
+}
+
+.btn-outline-lottery-warning {
+  border: 2px solid #fef3c7 !important;
+  color: #d97706 !important;
+  background: #fffbeb !important;
+}
+.btn-outline-lottery-warning:hover {
+  background: #d97706 !important;
+  color: white !important;
+  border-color: #d97706 !important;
+}
+
+.btn-outline-lottery-success {
+  border: 2px solid #d1fae5 !important;
+  color: #059669 !important;
+  background: #ecfdf5 !important;
+}
+.btn-outline-lottery-success:hover {
+  background: #059669 !important;
+  color: white !important;
+  border-color: #059669 !important;
+}
+
+.btn-outline-lottery-primary {
+  border: 2px solid #e0e7ff !important;
+  color: #4f46e5 !important;
+  background: #f5f3ff !important;
+}
+.btn-outline-lottery-primary:hover {
+  background: #4f46e5 !important;
+  color: white !important;
+  border-color: #4f46e5 !important;
+}

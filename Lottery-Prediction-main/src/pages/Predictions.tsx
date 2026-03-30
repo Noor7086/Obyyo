@@ -5,7 +5,7 @@ import { useSEO } from '../hooks/useSEO';
 import { predictionService } from '../services/predictionService';
 import { lotteryService } from '../services/lotteryService';
 import { Prediction, LotteryType, Lottery } from '../types';
-import { Modal, Button } from 'react-bootstrap';
+import { Modal, Button, Badge } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 
 const Predictions: React.FC = () => {
@@ -1012,60 +1012,58 @@ const Predictions: React.FC = () => {
                     {predictions.map((prediction) => {
                       const viableData = formatViableNumbers(prediction);
                       const isDouble = viableData && !Array.isArray(viableData);
+                      
+                      // Determine bonus ball name
+                      let bonusBallName = 'bonus';
+                      if (prediction.lotteryType?.toLowerCase().includes('powerball')) bonusBallName = 'Power';
+                      if (prediction.lotteryType?.toLowerCase().includes('megamillion')) bonusBallName = 'Mega';
+                      if (prediction.lotteryType?.toLowerCase().includes('lottoamerica')) bonusBallName = 'Star';
 
                       return (
                         <div key={prediction.id} id={`prediction-${prediction.id}`} className="col-md-6">
-                          <div className="card h-100 border">
-                            <div className="card-body">
-                              <div className="d-flex justify-content-between align-items-start mb-3">
-                                <div>
-                                  <h6 className="fw-bold mb-1">{prediction.lotteryDisplayName}</h6>
-                                  <small className="text-muted">
-                                    <i className="bi bi-calendar me-1"></i>
-                                    {new Date(prediction.drawDate).toLocaleDateString()} at {prediction.drawTime}
-                                  </small>
+                          <div className="card h-100 border-0 shadow-custom premium-lottery-card">
+                            <div className="card-body p-4">
+                              <div className="text-center mb-4">
+                                <Badge bg="primary" className="bg-opacity-10 text-primary px-3 py-2 rounded-pill mb-3 small fw-bold text-uppercase">
+                                  Available prediction
+                                </Badge>
+                                <h5 className="fw-bold mb-1">{prediction.lotteryDisplayName}</h5>
+                                <div className="text-muted small mt-2">
+                                  <i className="bi bi-calendar-event me-2"></i>
+                                  {new Date(prediction.drawDate).toLocaleDateString()} at {prediction.drawTime}
                                 </div>
-                                {(() => {
-                                  const isInTrial = user?.isInTrial || (user?.trialEndDate && new Date(user.trialEndDate) >= new Date());
-                                  const userSelectedLottery = user?.selectedLottery?.toLowerCase();
-                                  const currentSelectedLottery = selectedLottery?.toLowerCase();
-                                  return isInTrial && userSelectedLottery === currentSelectedLottery ? (
-                                    <span className="badge bg-success">Free Trial</span>
-                                  ) : (
-                                    <span className="badge bg-primary">${prediction.price ? prediction.price.toFixed(2) : '0.00'}</span>
-                                  );
-                                })()}
                               </div>
 
-                              {/* Show limited preview - just count, not actual numbers */}
-                              {(() => {
-                                const isInTrial = user?.isInTrial || (user?.trialEndDate && new Date(user.trialEndDate) >= new Date());
-                                const userSelectedLottery = user?.selectedLottery?.toLowerCase();
-                                const currentSelectedLottery = selectedLottery?.toLowerCase();
-                                return viableData && !(isInTrial && userSelectedLottery === currentSelectedLottery);
-                              })() && (
-                                  <div className="mb-3 p-2 bg-light rounded">
-                                    {isDouble ? (
-                                      <small className="text-muted">
-                                        <i className="bi bi-info-circle me-1"></i>
-                                        Includes {(viableData as any).whiteBalls?.length || 0} recommended white ball numbers and {(viableData as any).redBalls?.length || 0} recommended red ball number(s).
-                                        <strong className="text-primary"> Purchase to view full details.</strong>
-                                      </small>
-                                    ) : (
-                                      <small className="text-muted">
-                                        <i className="bi bi-info-circle me-1"></i>
-                                        Includes {(viableData as number[])?.length || 0} recommended numbers.
-                                        <strong className="text-primary"> Purchase to view full details.</strong>
-                                      </small>
-                                    )}
-                                  </div>
+                              <div className="text-center my-4 py-3 bg-light rounded-4">
+                                <div className="text-muted small mb-1">Pricing</div>
+                                <h2 className="fw-bold mb-0 text-primary">
+                                  ${prediction.price ? prediction.price.toFixed(2) : '0.00'}
+                                </h2>
+                              </div>
+
+                              <div className="mb-4 text-center">
+                                {isDouble ? (
+                                  <p className="text-secondary small mb-2">
+                                    Example: Includes <strong>{(viableData as any).whiteBalls?.length || 0}</strong> recommended red balls and <strong>{(viableData as any).redBalls?.length || 0}</strong> recommended blue {bonusBallName} balls.
+                                  </p>
+                                ) : (
+                                  <p className="text-secondary small mb-2">
+                                    Example: Includes <strong>{(viableData as number[])?.length || 0}</strong> recommended red balls.
+                                  </p>
                                 )}
+                                <p className="text-primary small fw-bold mb-0">Purchase to view full details.</p>
+                              </div>
+
+                              <hr className="opacity-10" />
 
                               <div className="d-flex justify-content-between align-items-center">
-                                <small className="text-muted">
-                                  <i className="bi bi-download me-1"></i>
-                                  {prediction.downloadCount} downloads
-                                </small>
+                                <div className="d-flex align-items-center gap-2 text-muted small">
+                                  <div className="p-2 bg-light rounded-circle d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px' }}>
+                                    <i className="bi bi-download"></i>
+                                  </div>
+                                  <span>{prediction.downloadCount || 0} downloads</span>
+                                </div>
+
                                 {(() => {
                                   const isInTrial = user?.isInTrial || (user?.trialEndDate && new Date(user.trialEndDate) >= new Date());
                                   const userSelectedLottery = user?.selectedLottery?.toLowerCase();
@@ -1073,11 +1071,10 @@ const Predictions: React.FC = () => {
                                   const trialMatches = isInTrial && userSelectedLottery === currentSelectedLottery;
                                   const hasPurchased = purchasedPredictionIds.has(prediction.id);
 
-                                  // If user has purchased/viewed this prediction, show View button
                                   if (hasPurchased) {
                                     return (
                                       <button
-                                        className="btn btn-sm btn-success"
+                                        className="btn btn-success px-4 fw-bold shadow-sm"
                                         onClick={async (e) => {
                                           e.preventDefault();
                                           try {
@@ -1088,9 +1085,7 @@ const Predictions: React.FC = () => {
                                               prediction.id
                                             );
                                             setPurchasedPrediction(fullPrediction);
-                                            // Check if it was a trial view or purchase
-                                            const isTrialView = trialMatches && !hasUsedFreeViewToday;
-                                            if (isTrialView) {
+                                            if (trialMatches && !hasUsedFreeViewToday) {
                                               setShowTrialPredictionModal(true);
                                             } else {
                                               setShowPredictionModal(true);
@@ -1104,62 +1099,28 @@ const Predictions: React.FC = () => {
                                         }}
                                         disabled={loadingPredictionDetails && loadingPredictionId === prediction.id}
                                       >
-                                        {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
-                                          <>
-                                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                                            Loading...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <i className="bi bi-eye me-1"></i>
-                                            View
-                                          </>
-                                        )}
+                                        <i className="bi bi-eye me-2"></i>
+                                        View
                                       </button>
                                     );
                                   }
 
-                                  // If trial user and hasn't used free view today AND hasn't purchased this prediction, show View More
-                                  // Otherwise show Purchase button
-                                  if (trialMatches && !hasUsedFreeViewToday && !hasPurchased) {
-                                    return (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={(e) => handlePurchaseClick(prediction, e)}
-                                        disabled={loadingPredictionDetails && loadingPredictionId === prediction.id}
-                                      >
-                                        {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
-                                          <>
-                                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                                            Loading...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <i className="bi bi-eye me-1"></i>
-                                            View More
-                                          </>
-                                        )}
-                                      </button>
-                                    );
-                                  }
+                                  const isTrialView = trialMatches && !hasUsedFreeViewToday;
+                                  const btnClass = isTrialView ? "btn-success" : "btn-primary";
+                                  const btnText = isTrialView ? "View More" : "Purchase";
 
-                                  // Show Purchase button for all other cases
-                                  // (trial user who used free view, or non-trial user, or already purchased)
                                   return (
                                     <button
-                                      className="btn btn-sm btn-primary"
+                                      className={`btn ${btnClass} px-4 fw-bold shadow-sm`}
                                       onClick={(e) => handlePurchaseClick(prediction, e)}
                                       disabled={paymentLoading || (loadingPredictionDetails && loadingPredictionId === prediction.id)}
                                     >
                                       {loadingPredictionDetails && loadingPredictionId === prediction.id ? (
-                                        <>
-                                          <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                                          Loading...
-                                        </>
+                                        <span className="spinner-border spinner-border-sm" role="status"></span>
                                       ) : (
                                         <>
-                                          <i className="bi bi-cart me-1"></i>
-                                          Purchase
+                                          <i className={`bi ${isTrialView ? 'bi-eye' : 'bi-cart'} me-2`}></i>
+                                          {btnText}
                                         </>
                                       )}
                                     </button>

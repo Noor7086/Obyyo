@@ -378,7 +378,7 @@ const AnnouncedResults: React.FC = () => {
                         {result.actualResult && hasValidPrediction(getActualWinningNumbers(result.actualResult, result.lotteryType)) && (
                           <div className="col-12 mt-3 pt-3 border-top">
                             <div className="d-flex justify-content-between align-items-center mb-1">
-                              <span className="text-muted fw-semibold d-block">Result</span>
+                              <span className="text-muted fw-semibold d-block">Draw Result</span>
                               {(() => {
                                 const acc = calculateAccuracy(result.ourPrediction, result.actualResult, result.lotteryType);
                                 if (acc !== null) {
