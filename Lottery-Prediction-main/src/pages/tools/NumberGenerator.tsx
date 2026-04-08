@@ -215,7 +215,6 @@ const NumberGenerator: React.FC = () => {
               usedNumbers.add(number);
             }
           }
-          mainNumbers.sort((a, b) => a - b);
         }
 
         // Generate bonus number if needed
@@ -564,8 +563,8 @@ const NumberGenerator: React.FC = () => {
                           {/* Main Numbers */}
                           <div className="mb-3">
                             <div className="d-flex flex-wrap justify-content-center gap-2">
-                              {combo.mainNumbers.map((num: number) => (
-                                <span key={num} className="badge bg-primary fs-6 px-3 py-2">
+                              {combo.mainNumbers.map((num: number, idx: number) => (
+                                <span key={`${combo.id}-${num}-${idx}`} className="badge bg-primary fs-6 px-3 py-2">
                                   {num}
                                 </span>
                               ))}
