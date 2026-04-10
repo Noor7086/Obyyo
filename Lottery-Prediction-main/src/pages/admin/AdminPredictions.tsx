@@ -953,8 +953,24 @@ const AdminPredictions: React.FC = () => {
   const toggleNumber = (number: number, type: 'whiteBalls' | 'redBalls' | 'singleNumbers' | 'pick3Numbers') => {
     setNewPrediction(prev => {
       const currentNumbers = prev[type];
-      const isSelected = currentNumbers.includes(number);
       
+      // For Pick 3, we allow duplicates but also want a way to remove.
+      // Standard behavior: clicking a number adds it. Clicking it again can either add another OR toggle.
+      // Let's make Pick 3 prediction selection also support duplicates to match results.
+      if (type === 'pick3Numbers') {
+        const isSelected = currentNumbers.includes(number);
+        // Toggle behavior for "avoid" list is usually simpler, but let's allow duplicates if already present
+        // Actually, for "avoid" lists duplicates don't make sense.
+        // But for results they do. Let's keep toggle for predictions, but allow duplicates for results.
+        return {
+          ...prev,
+          [type]: isSelected
+            ? currentNumbers.filter(n => n !== number)
+            : [...currentNumbers, number].sort((a, b) => a - b)
+        };
+      }
+      
+      const isSelected = currentNumbers.includes(number);
       return {
         ...prev,
         [type]: isSelected
@@ -963,6 +979,14 @@ const AdminPredictions: React.FC = () => {
       };
     });
   };
+
+  const removeNumberAtIndex = (index: number, type: 'whiteBalls' | 'redBalls' | 'singleNumbers' | 'pick3Numbers') => {
+    setNewPrediction(prev => ({
+      ...prev,
+      [type]: prev[type].filter((_, i) => i !== index)
+    }));
+  };
+
 
   const clearNumbers = (type: 'whiteBalls' | 'redBalls' | 'singleNumbers' | 'pick3Numbers') => {
     setNewPrediction(prev => ({
@@ -976,9 +1000,11 @@ const AdminPredictions: React.FC = () => {
     max: number;
     selected: number[];
     onToggle: (num: number) => void;
+    onRemoveIndex?: (index: number) => void;
     onClear: () => void;
     label: string;
-  }> = ({ min, max, selected, onToggle, onClear, label }) => {
+    isPick3?: boolean;
+  }> = ({ min, max, selected, onToggle, onRemoveIndex, onClear, label, isPick3 }) => {
     const numbers = Array.from({ length: max - min + 1 }, (_, i) => i + min);
     
     return (
@@ -1021,24 +1047,35 @@ const AdminPredictions: React.FC = () => {
                     fontSize: '0.9rem'
                   }}
                   onClick={() => onToggle(num)}
-                  title={isSelected ? 'Click to deselect' : 'Click to select'}
+                  title={isPick3 ? 'Click to add' : (isSelected ? 'Click to deselect' : 'Click to select')}
                 >
-                  {num.toString().padStart(2, '0')}
+                  {num.toString().padStart(isPick3 ? 1 : 2, '0')}
                 </button>
               );
             })}
           </div>
         </div>
         {selected.length > 0 && (
-          <div className="mt-2">
-            <small className="text-muted">
-              Selected: {selected.join(', ')}
-            </small>
+          <div className="mt-2 d-flex flex-wrap gap-1 align-items-center">
+            <small className="text-muted me-2">Selected Numbers:</small>
+            {selected.map((num, idx) => (
+              <span 
+                key={`${num}-${idx}`} 
+                className="badge bg-primary d-flex align-items-center"
+                style={{ cursor: onRemoveIndex ? 'pointer' : 'default', fontSize: '0.85rem' }}
+                onClick={() => onRemoveIndex && onRemoveIndex(idx)}
+                title={onRemoveIndex ? 'Click to remove this specific number' : ''}
+              >
+                {num}
+                {onRemoveIndex && <i className="bi bi-x ms-1"></i>}
+              </span>
+            ))}
           </div>
         )}
       </div>
     );
   };
+
 
   if (loading && predictions.length === 0) {
     return (
@@ -1985,24 +2022,27 @@ const AdminPredictions: React.FC = () => {
                               selected={resultData.winningNumbers.pick3Numbers}
                               onToggle={(num) => {
                                 const current = resultData.winningNumbers.pick3Numbers;
-                                if (current.includes(num)) {
-                                  setResultData({
-                                    ...resultData,
-                                    winningNumbers: {
-                                      ...resultData.winningNumbers,
-                                      pick3Numbers: current.filter(n => n !== num)
-                                    }
-                                  });
-                                } else {
-                                  setResultData({
-                                    ...resultData,
-                                    winningNumbers: {
-                                      ...resultData.winningNumbers,
-                                      pick3Numbers: [...current, num].sort((a, b) => a - b)
-                                    }
-                                  });
-                                }
+                                // For Pick 3 Results, we always allow adding duplicates and maintain order
+                                setResultData({
+                                  ...resultData,
+                                  winningNumbers: {
+                                    ...resultData.winningNumbers,
+                                    pick3Numbers: [...current, num]
+                                  }
+                                });
                               }}
+                              onRemoveIndex={(index) => {
+                                const current = resultData.winningNumbers.pick3Numbers;
+                                setResultData({
+                                  ...resultData,
+                                  winningNumbers: {
+                                    ...resultData.winningNumbers,
+                                    pick3Numbers: current.filter((_, i) => i !== index)
+                                  }
+                                });
+                              }}
+                              isPick3={true}
+
                               onClear={() => setResultData({
                                 ...resultData,
                                 winningNumbers: { ...resultData.winningNumbers, pick3Numbers: [] }
@@ -2312,24 +2352,27 @@ const AdminPredictions: React.FC = () => {
                               selected={resultData.winningNumbers.pick3Numbers}
                               onToggle={(num) => {
                                 const current = resultData.winningNumbers.pick3Numbers;
-                                if (current.includes(num)) {
-                                  setResultData({
-                                    ...resultData,
-                                    winningNumbers: {
-                                      ...resultData.winningNumbers,
-                                      pick3Numbers: current.filter(n => n !== num)
-                                    }
-                                  });
-                                } else {
-                                  setResultData({
-                                    ...resultData,
-                                    winningNumbers: {
-                                      ...resultData.winningNumbers,
-                                      pick3Numbers: [...current, num].sort((a, b) => a - b)
-                                    }
-                                  });
-                                }
+                                // For Pick 3 Results, we always allow adding duplicates and maintain order
+                                setResultData({
+                                  ...resultData,
+                                  winningNumbers: {
+                                    ...resultData.winningNumbers,
+                                    pick3Numbers: [...current, num]
+                                  }
+                                });
                               }}
+                              onRemoveIndex={(index) => {
+                                const current = resultData.winningNumbers.pick3Numbers;
+                                setResultData({
+                                  ...resultData,
+                                  winningNumbers: {
+                                    ...resultData.winningNumbers,
+                                    pick3Numbers: current.filter((_, i) => i !== index)
+                                  }
+                                });
+                              }}
+                              isPick3={true}
+
                               onClear={() => setResultData({
                                 ...resultData,
                                 winningNumbers: { ...resultData.winningNumbers, pick3Numbers: [] }
@@ -2741,9 +2784,12 @@ const AdminPredictions: React.FC = () => {
                             max={config.numbers.max}
                             selected={newPrediction.pick3Numbers}
                             onToggle={(num) => toggleNumber(num, 'pick3Numbers')}
+                            onRemoveIndex={(idx) => removeNumberAtIndex(idx, 'pick3Numbers')}
                             onClear={() => clearNumbers('pick3Numbers')}
                             label={config.numbers.label}
+                            isPick3={true}
                           />
+
                         );
                       }
                       return null;
@@ -3052,9 +3098,12 @@ const AdminPredictions: React.FC = () => {
                             max={config.numbers.max}
                             selected={newPrediction.pick3Numbers}
                             onToggle={(num) => toggleNumber(num, 'pick3Numbers')}
+                            onRemoveIndex={(idx) => removeNumberAtIndex(idx, 'pick3Numbers')}
                             onClear={() => clearNumbers('pick3Numbers')}
                             label={config.numbers.label}
+                            isPick3={true}
                           />
+
                         );
                       }
                       return null;
