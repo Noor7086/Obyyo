@@ -76,7 +76,7 @@ const AdminPredictions: React.FC = () => {
 
   const [newPrediction, setNewPrediction] = useState({
     lotteryType: 'powerball' as LotteryType,
-    lotteryDisplayName: '',
+    lotteryDisplayName: 'Powerball',
     drawDate: '',
     drawTime: '',
     drawDay: '' as string, // Selected draw day (e.g., 'monday', 'tuesday')
@@ -815,7 +815,7 @@ const AdminPredictions: React.FC = () => {
   const resetPredictionForm = () => {
     setNewPrediction({
       lotteryType: 'powerball',
-      lotteryDisplayName: '',
+      lotteryDisplayName: 'Powerball',
       drawDate: '',
       drawTime: '',
       drawDay: '',
