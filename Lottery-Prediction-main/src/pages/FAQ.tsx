@@ -13,56 +13,113 @@ const FAQ: React.FC = () => {
 
   const faqData = [
     {
-      question: "How accurate are Obyyo's lottery predictions?",
-      answer: "Our prediction system achieves 95%+ accuracy in identifying non-viable numbers. This means we can help you avoid numbers that are statistically unlikely to be drawn, improving your overall odds of winning."
+      question: 'How do I change my username?',
+      answer:
+        '1. Login to your account, click your name at the top right, select profile from the dropdown list. Click on the "Edit" button next to "Personal Information".\n2. You can now change your username.\n3. Click on save changes.'
     },
     {
-      question: "What lottery games does Obyyo support?",
-      answer: "We support all major lottery games including Powerball, Mega Millions, Lotto America, Gopher 5, and Pick 3. Our system continuously analyzes patterns for each specific lottery to provide the most accurate predictions."
+      question: "I can't log in. What do I do?",
+      answer:
+        '1. Read the error message in the red notification box.\n2. Ensure you are typing the correct email and password.\n3. Contact support@obyyo.com if problem persist.'
     },
     {
-      question: "How does the prediction system work?",
-      answer: "Our advanced algorithms analyze historical lottery data, number frequency patterns, hot and cold numbers, and statistical trends. The system identifies numbers that are statistically unlikely to be drawn in upcoming games."
+      question: 'What if I did not receive my confirmation email?',
+      answer:
+        '1. Check your email Spam/Junk, or Promotions/Social folders.\n2. Check if the email address you entered is correct. If you entered an incorrect email, go to "Get Started" and restart the process.\n3. Contact support@obyyo.com to request a new confirmation email.'
     },
     {
-      question: "Is there a guarantee that I will win?",
-      answer: "No lottery prediction system can guarantee wins. However, our service helps you make more informed decisions by identifying numbers with lower probability, potentially improving your overall success rate and reducing wasted spending on unlikely combinations."
+      question: 'How do I sign up for an Obyyo account?',
+      answer:
+        '1. Go to the Obyyo Get Started page.\n2. Enter your First name, last name email, phone number, country, select your preferred 7 days Free test lottery and create your password.\n3. Click "Start Free Trial" to submit your details.\n4. Check your inbox and click the email confirmation link.'
     },
     {
-      question: "How much does the service cost?",
-      answer: "We offer flexible pricing starting at $1 per prediction for individual lottery games. No hidden fees or long-term commitments required."
+      question: 'Does Obyyo sell online lottery tickets?',
+      answer: 'No. Obyyo does not sell lottery tickets online.'
     },
     {
-      question: "How do I receive my predictions?",
-      answer: "You can access predictions through our web dashboard, and we also send real-time notifications when new predictions are available for your selected lottery games. All predictions are delivered instantly after analysis is complete."
+      question: 'How do I generate combination lines for my chosen lottery?',
+      answer:
+        '1. Login to your account.\n2. Purchase the lottery Prediction of your choice.\n3. Go back to the dashboard, click on "Number Generator".\n4. Select the lottery you purchased, the generator will be displayed.\n5. Type-in the number of lines/combinations you would like to generate. The number generator will generate lines/combinations only of viable numbers (numbers not affected by the prediction). Example: If 15 numbers are deemed not viable before the draw of Gopher 5 which comprise of 42 balls, the Number Generator will generate lines/combinations only of the 27 left-over viable numbers.\n6. Click "Export PDF" to download the generated lines/combinations.'
     },
     {
-      question: "Can I use the number generator with the predictions?",
-      answer: "Yes! Our smart number generator works in conjunction with our predictions. It generates optimal number combinations using only the viable numbers identified by our system, maximizing your chances of success."
+      question: 'How do I transfer money into my wallet?',
+      answer:
+        '1. Login to your account.\n2. Click "Wallet" on the top-right.\n3. Click on "+ Add Funds".\n4. Type in the amount you would like to transfer.\n5. Select the method of payment.\n6. Fill-in the required information, then click on "Pay" to complete the transaction.'
     },
     {
-      question: "Is my personal information secure?",
-      answer: "Absolutely. We use bank-level encryption and security protocols to protect your personal data and payment information. We never share your information with third parties and follow strict privacy standards."
+      question: 'How do I purchase predictions?',
+      answer:
+        '1. Login to your account.\n2. Go to the Quick Actions section of the dashboard, click on "View Predictions".\n3. Click on the lottery of your choice. Information relating to the prediction will be displayed.\n4. Click on the purchase button.\n5. Accept the conditions of sales.\n6. Pay for prediction with the amount in your pre-loaded wallet or directly with a credit/debit card.'
+    },
+    {
+      question: 'How can I set-up my prediction notification settings?',
+      answer:
+        '1. Login to your account.\n2. Click "Notification Settings" located on the dashboard.\n3. Activate the boxes of 2 extra lotteries you would like to receive notifications. Only 3 notifications including your preferred at the time of registration are allowed.'
+    },
+    {
+      question: 'How many numbers are predicted per each lottery game?',
+      answer:
+        'There is no define numbers of prediction for any lottery game. The total numbers of prediction are based on the result of analysis.'
+    },
+    {
+      question: 'Do you offer customer support?',
+      answer:
+        'We provide 24/7 customer support through email and live chat. Our team is always ready to help with any questions or technical issues.'
+    },
+    {
+      question: 'Can I track my prediction success rate?',
+      answer:
+        'Yes! Our dashboard includes detailed analytics showing your prediction accuracy, success rates, and lottery results. You can track your performance over time and see how our service is helping improve your lottery strategy.'
+    },
+    {
+      question: 'How often are predictions updated?',
+      answer:
+        'Predictions are updated daily for each lottery game, typically 2-4 hours after the drawing. Our system continuously monitors and analyzes new data to ensure you receive the most current and accurate predictions.'
     },
     {
       question: "What if I'm not satisfied with the service?",
-      answer: "We offer a 7-day free trial for new users. If you're not completely satisfied, you can cancel anytime with no questions asked. We're committed to providing value to our users."
+      answer:
+        "We offer a 7-day free trial for new users. If you're not completely satisfied, you can cancel anytime with no questions asked. We're committed to providing value to our users."
     },
     {
-      question: "How often are predictions updated?",
-      answer: "Predictions are updated daily for each lottery game, typically 2-4 hours after the drawing. Our system continuously monitors and analyzes new data to ensure you receive the most current and accurate predictions."
+      question: 'Is my personal information secure?',
+      answer:
+        'Absolutely. We use bank-level encryption and security protocols to protect your personal data and payment information. We never share your information with third parties and follow strict privacy standards.'
     },
     {
-      question: "Can I track my prediction success rate?",
-      answer: "Yes! Our dashboard includes detailed analytics showing your prediction accuracy, success rates, and lottery results. You can track your performance over time and see how our service is helping improve your lottery strategy."
+      question: 'Can I use the number generator with the predictions?',
+      answer:
+        'Yes! Our smart number generator works in conjunction with our predictions. It generates optimal number combinations using only the viable numbers identified by our system, maximizing your chances of success.'
     },
     {
-      question: "Do you offer customer support?",
-      answer: "We provide 24/7 customer support through email and live chat. Our team is always ready to help with any questions or technical issues."
+      question: 'How do I receive my predictions?',
+      answer:
+        'You can access predictions through our web dashboard, and we also send real-time notifications when new predictions are available for your selected lottery games. All predictions are delivered instantly after analysis is complete.'
     },
     {
-      question: "How many numbers are predicted per each lottery game?",
-      answer: "There is no define numbers of prediction for any lottery game. The total numbers of prediction are based on the result of analysis"
+      question: 'How much does the service cost?',
+      answer:
+        'We offer flexible pricing starting at $1 per prediction for individual lottery games. No hidden fees or long-term commitments required.'
+    },
+    {
+      question: 'Is there a guarantee that I will win?',
+      answer:
+        'No lottery prediction system can guarantee wins. However, our service helps you make more informed decisions by identifying numbers with lower probability, potentially improving your overall success rate and reducing wasted spending on unlikely combinations.'
+    },
+    {
+      question: 'How does the prediction system work?',
+      answer:
+        'Our advanced algorithms analyze historical lottery data, number frequency patterns, hot and cold numbers, and statistical trends. The system identifies numbers that are statistically unlikely to be drawn in upcoming games.'
+    },
+    {
+      question: 'What lottery games does Obyyo support?',
+      answer:
+        'We support all major lottery games including Powerball, Mega Millions, Lotto America, Gopher 5, and Pick 3. Our system continuously analyzes patterns for each specific lottery to provide the most accurate predictions.'
+    },
+    {
+      question: "How accurate are Obyyo's lottery predictions?",
+      answer:
+        "Our prediction system achieves 95%+ accuracy in identifying non-viable numbers. This means we can help you avoid numbers that are statistically unlikely to be drawn, improving your overall odds of winning."
     }
   ];
 
@@ -98,7 +155,9 @@ const FAQ: React.FC = () => {
                 </h2>
                 <div className={`accordion-collapse collapse ${openItems.includes(index) ? 'show' : ''}`}>
                   <div className="accordion-body p-4">
-                    <p className="mb-0 lh-lg">{item.answer}</p>
+                    <p className="mb-0 lh-lg" style={{ whiteSpace: 'pre-line' }}>
+                      {item.answer}
+                    </p>
                   </div>
                 </div>
               </div>
