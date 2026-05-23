@@ -117,11 +117,8 @@ export const sendSMS = async (to, body) => {
     // Normalize phone number before sending
     const normalizedPhone = normalizePhoneNumber(to);
     
-    // Append unsubscribe message
-    const messageBody = `${body}\n\nSend STOP to unsubscribe`;
-    
     if (!twilioClient) {
-        console.log(`[Mock Twilio SMS] Would send to ${normalizedPhone}: ${messageBody}`);
+        console.log(`[Mock Twilio SMS] Would send to ${normalizedPhone}: ${body}`);
         return;
     }
 
@@ -130,12 +127,12 @@ export const sendSMS = async (to, body) => {
 
         if (!fromNum) {
             console.warn('TWILIO_PHONE_NUMBER not set for SMS, falling back to mock');
-            console.log(`[Mock Twilio SMS] Would send to ${normalizedPhone}: ${messageBody}`);
+            console.log(`[Mock Twilio SMS] Would send to ${normalizedPhone}: ${body}`);
             return;
         }
 
         await twilioClient.messages.create({
-            body: messageBody,
+            body: body,
             from: fromNum,
             to: normalizedPhone
         });

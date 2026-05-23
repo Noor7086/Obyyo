@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { predictionService } from '../../services/predictionService';
 
@@ -11,9 +12,11 @@ const NumberGenerator: React.FC = () => {
   const [selectedLottery, setSelectedLottery] = useState('powerball');
   const [generatedNumbers, setGeneratedNumbers] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [numberOfCombinations, setNumberOfCombinations] = useState(5);
+  const [numberOfCombinations, setNumberOfCombinations] = useState<number | ''>(5);
   const generateSectionRef = useRef<HTMLDivElement>(null);
   const [excludedByLottery, setExcludedByLottery] = useState<ExcludedByLottery>({});
+  const [unlockedLotteries, setUnlockedLotteries] = useState<Set<string>>(new Set());
+  const [unlockLoading, setUnlockLoading] = useState(true);
 
 
   const lotteryCategories = [
@@ -143,6 +146,61 @@ const NumberGenerator: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Compute which lotteries are unlocked for the Number Generator.
+  // A lottery is unlocked when EITHER:
+  //   - the user has an active trial and selectedLottery matches and trialEndDate is in the future, OR
+  //   - the user has a purchase (paid or trial) whose prediction's drawDate is still in the future.
+  useEffect(() => {
+    if (!user) {
+      setUnlockedLotteries(new Set());
+      setUnlockLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const computeUnlocked = async () => {
+      setUnlockLoading(true);
+      const unlocked = new Set<string>();
+      const now = Date.now();
+
+      if (
+        user.isInTrial &&
+        user.selectedLottery &&
+        user.trialEndDate &&
+        new Date(user.trialEndDate).getTime() > now
+      ) {
+        unlocked.add(user.selectedLottery);
+      }
+
+      try {
+        const purchases = await predictionService.getMyPurchases(1, 100);
+        purchases.forEach((p) => {
+          const pred = p.prediction;
+          if (pred && typeof pred === 'object' && pred.drawDate && pred.lotteryType) {
+            if (new Date(pred.drawDate).getTime() >= now) {
+              unlocked.add(pred.lotteryType);
+            }
+          }
+        });
+      } catch (e) {
+        // Non-fatal — keep whatever we computed from the trial check.
+      }
+
+      if (!cancelled) {
+        setUnlockedLotteries(unlocked);
+        setUnlockLoading(false);
+      }
+    };
+
+    computeUnlocked();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.isInTrial, user?.selectedLottery, user?.trialEndDate]);
+
+  const isLotteryUnlocked = (lotteryId: string) => unlockedLotteries.has(lotteryId);
+  const selectedLotteryUnlocked = !!user && isLotteryUnlocked(selectedLottery);
+
   const generateViableNumbers = (lotteryId: string) => {
     const lottery = lotteryTypes.find(l => l.id === lotteryId);
     const excluded = excludedByLottery[lotteryId] || { main: [], bonus: [] };
@@ -171,7 +229,13 @@ const NumberGenerator: React.FC = () => {
   };
 
   const generateCombinations = () => {
+    if (!selectedLotteryUnlocked) {
+      toast.error('Purchase a prediction for this lottery to unlock the Number Generator.');
+      return;
+    }
     setLoading(true);
+
+    const combinationsToGenerate = Math.max(1, Math.min(100, Number(numberOfCombinations) || 1));
 
     setTimeout(() => {
       const lottery = lotteryTypes.find(l => l.id === selectedLottery);
@@ -196,7 +260,7 @@ const NumberGenerator: React.FC = () => {
         return;
       }
 
-      for (let i = 0; i < numberOfCombinations; i++) {
+      for (let i = 0; i < combinationsToGenerate; i++) {
         const mainNumbers: number[] = [];
 
         if (isPick3) {
@@ -319,6 +383,9 @@ const NumberGenerator: React.FC = () => {
 
   const handleLotterySelection = (lotteryId: string) => {
     setSelectedLottery(lotteryId);
+    if (user && !isLotteryUnlocked(lotteryId)) {
+      toast.error('This lottery is locked. Purchase a prediction to unlock the Number Generator.');
+    }
     // Scroll to generate section after a short delay to ensure state update
     setTimeout(() => {
       generateSectionRef.current?.scrollIntoView({
@@ -361,6 +428,26 @@ const NumberGenerator: React.FC = () => {
             </div>
           </div>
 
+          {/* Access Info Banner */}
+          {user && (
+            <div
+              className="alert d-flex align-items-center mb-4"
+              style={{
+                background: '#eef3ff',
+                border: '1px solid #c7d4ff',
+                borderRadius: '12px',
+                color: '#2a3a8c'
+              }}
+            >
+              <i className="bi bi-shield-lock-fill fs-4 me-3"></i>
+              <div className="text-start small">
+                <strong>How access works: </strong>
+                The Number Generator unlocks for a lottery when you purchase a prediction (or use your free trial) for it.
+                It stays unlocked until that prediction's draw date passes — then it locks again.
+              </div>
+            </div>
+          )}
+
           {/* Quick Access - Popular Lotteries */}
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body p-4">
@@ -372,6 +459,7 @@ const NumberGenerator: React.FC = () => {
                 {['powerball', 'megamillion', 'gopher5', 'lottoamerica'].map((lotteryId) => {
                   const lottery = lotteryTypes.find(l => l.id === lotteryId);
                   if (!lottery) return null;
+                  const locked = !!user && !isLotteryUnlocked(lotteryId);
                   return (
                     <div key={lotteryId} className="col-md-3 col-sm-6">
                       <button
@@ -381,9 +469,20 @@ const NumberGenerator: React.FC = () => {
                           borderRadius: '10px',
                           padding: '0.75rem',
                           fontWeight: '600',
-                          transition: 'all 0.3s ease'
+                          transition: 'all 0.3s ease',
+                          opacity: locked ? 0.7 : 1,
+                          position: 'relative'
                         }}
                       >
+                        {locked && (
+                          <span
+                            className="badge bg-secondary"
+                            style={{ position: 'absolute', top: 6, right: 6 }}
+                            title="Locked — buy a prediction to unlock"
+                          >
+                            <i className="bi bi-lock-fill"></i>
+                          </span>
+                        )}
                         <div className="d-flex align-items-center justify-content-center">
                           <span className="me-2" style={{ fontSize: '1.2rem' }}>{lottery.icon}</span>
                           <div className="text-start">
@@ -421,31 +520,45 @@ const NumberGenerator: React.FC = () => {
                     </div>
 
                     <div className="row g-3">
-                      {categoryLotteries.map((lottery) => (
-                        <div key={lottery.id} className="col-md-6 col-lg-4">
-                          <div
-                            className={`card h-100 cursor-pointer ${selectedLottery === lottery.id ? 'border-primary' : ''}`}
-                            onClick={() => handleLotterySelection(lottery.id)}
-                            style={{
-                              cursor: 'pointer',
-                              transition: 'all 0.3s ease',
-                              border: selectedLottery === lottery.id ? '2px solid var(--primary-color)' : '1px solid #e9ecef'
-                            }}
-                          >
-                            <div className="card-body text-center">
-                              <div className="mb-3">
-                                <span style={{ fontSize: '2rem' }}>{lottery.icon}</span>
-                              </div>
-                              <h6 className="fw-bold">{lottery.name}</h6>
-                              <p className="small text-muted mb-2">{lottery.description}</p>
-                              <div className="small text-info">
-                                Viable Numbers: {generateViableNumbers(lottery.id).main.length}
-                                {lottery.bonusNumbers > 0 && ` + ${generateViableNumbers(lottery.id).bonus.length} bonus`}
+                      {categoryLotteries.map((lottery) => {
+                        const locked = !!user && !isLotteryUnlocked(lottery.id);
+                        return (
+                          <div key={lottery.id} className="col-md-6 col-lg-4">
+                            <div
+                              className={`card h-100 cursor-pointer ${selectedLottery === lottery.id ? 'border-primary' : ''}`}
+                              onClick={() => handleLotterySelection(lottery.id)}
+                              style={{
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                border: selectedLottery === lottery.id ? '2px solid var(--primary-color)' : '1px solid #e9ecef',
+                                opacity: locked ? 0.75 : 1,
+                                position: 'relative'
+                              }}
+                            >
+                              {locked && (
+                                <span
+                                  className="badge bg-secondary"
+                                  style={{ position: 'absolute', top: 8, right: 8 }}
+                                  title="Locked — buy a prediction to unlock"
+                                >
+                                  <i className="bi bi-lock-fill me-1"></i>Locked
+                                </span>
+                              )}
+                              <div className="card-body text-center">
+                                <div className="mb-3">
+                                  <span style={{ fontSize: '2rem' }}>{lottery.icon}</span>
+                                </div>
+                                <h6 className="fw-bold">{lottery.name}</h6>
+                                <p className="small text-muted mb-2">{lottery.description}</p>
+                                <div className="small text-info">
+                                  Viable Numbers: {generateViableNumbers(lottery.id).main.length}
+                                  {lottery.bonusNumbers > 0 && ` + ${generateViableNumbers(lottery.id).bonus.length} bonus`}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {category.id !== lotteryCategories[lotteryCategories.length - 1].id && (
@@ -472,8 +585,19 @@ const NumberGenerator: React.FC = () => {
                     className="form-control"
                     value={numberOfCombinations}
                     onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1;
-                      setNumberOfCombinations(Math.max(1, Math.min(100, value))); // Limit between 1 and 100
+                      const raw = e.target.value;
+                      if (raw === '') {
+                        setNumberOfCombinations('');
+                        return;
+                      }
+                      const parsed = parseInt(raw, 10);
+                      if (Number.isNaN(parsed)) return;
+                      setNumberOfCombinations(Math.min(100, parsed));
+                    }}
+                    onBlur={() => {
+                      if (numberOfCombinations === '' || (typeof numberOfCombinations === 'number' && numberOfCombinations < 1)) {
+                        setNumberOfCombinations(1);
+                      }
                     }}
                     min="1"
                     max="100"
@@ -500,13 +624,33 @@ const NumberGenerator: React.FC = () => {
                 Generate Numbers
               </h5>
               <p className="text-muted mb-4">
-                We will generate {numberOfCombinations} optimal combination{numberOfCombinations > 1 ? 's' : ''} for {selectedLotteryData?.name} using only viable numbers
+                We will generate {numberOfCombinations || 1} optimal combination{(Number(numberOfCombinations) || 1) > 1 ? 's' : ''} for {selectedLotteryData?.name} using only viable numbers
               </p>
 
               {!user ? (
                 <div className="alert alert-info">
                   <i className="bi bi-info-circle me-2"></i>
                   Please <a href="/register" className="alert-link">sign up</a> or <a href="/login" className="alert-link">login</a> to generate numbers
+                </div>
+              ) : unlockLoading ? (
+                <div className="text-muted">
+                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                  Checking your access...
+                </div>
+              ) : !selectedLotteryUnlocked ? (
+                <div className="alert alert-warning text-start">
+                  <div className="d-flex align-items-center mb-2">
+                    <i className="bi bi-lock-fill fs-4 me-2"></i>
+                    <strong>This lottery is locked</strong>
+                  </div>
+                  <p className="mb-3 small">
+                    Purchase a prediction for <strong>{selectedLotteryData?.name}</strong> to unlock the Number Generator.
+                    It will stay unlocked until that prediction's draw date passes.
+                  </p>
+                  <a href="/predictions" className="btn btn-primary btn-sm">
+                    <i className="bi bi-bag-plus me-1"></i>
+                    Buy a Prediction
+                  </a>
                 </div>
               ) : (
                 <button
