@@ -33,6 +33,7 @@ const Profile: React.FC = () => {
     phone: user?.phone || '',
     selectedLottery: user?.selectedLottery || '',
     predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true,
+    emailMarketingEnabled: user?.emailMarketingEnabled !== undefined ? user.emailMarketingEnabled : true,
     notificationLotteries: (user?.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : [] as LotteryType[]
   });
   const [passwordData, setPasswordData] = useState({
@@ -78,6 +79,7 @@ const Profile: React.FC = () => {
             phone: user.phone || '',
             selectedLottery: user.selectedLottery || '',
             predictionNotificationsEnabled: prev.predictionNotificationsEnabled,
+            emailMarketingEnabled: prev.emailMarketingEnabled,
             notificationLotteries: (user.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
           };
         }
@@ -89,6 +91,7 @@ const Profile: React.FC = () => {
           phone: user.phone || '',
           selectedLottery: user.selectedLottery || '',
           predictionNotificationsEnabled: userPredictionNotifications,
+          emailMarketingEnabled: user.emailMarketingEnabled !== undefined ? user.emailMarketingEnabled : true,
           notificationLotteries: (user.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
         };
       });
@@ -308,6 +311,7 @@ const Profile: React.FC = () => {
         selectedLottery: formData.selectedLottery,
         notificationsEnabled: true,
         predictionNotificationsEnabled: formData.predictionNotificationsEnabled,
+        emailMarketingEnabled: formData.emailMarketingEnabled,
         notificationLotteries: (formData.notificationLotteries || []) as LotteryType[]
       };
       const updatedUser = await updateProfile(updateData);
@@ -523,6 +527,7 @@ const Profile: React.FC = () => {
                         phone: user?.phone || '',
                         selectedLottery: user?.selectedLottery || '',
                         predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true,
+                        emailMarketingEnabled: user?.emailMarketingEnabled !== undefined ? user.emailMarketingEnabled : true,
                         notificationLotteries: (user?.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
                       });
                       setErrors({});
@@ -733,6 +738,45 @@ const Profile: React.FC = () => {
                     />
                   </div>
                 </Form.Group>
+                <Form.Group className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="flex-grow-1">
+                      <Form.Label className="fw-medium mb-1">Email Updates from Obyyo</Form.Label>
+                      <Form.Text className="text-muted d-block">
+                        Receive marketing emails about new lotteries, special offers, and product updates.
+                        Turning this off will remove you from our mailing list.
+                      </Form.Text>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="emailMarketingEnabled"
+                      name="emailMarketingEnabled"
+                      checked={formData.emailMarketingEnabled}
+                      onChange={async (e) => {
+                        const newValue = e.target.checked;
+                        const previousValue = formData.emailMarketingEnabled;
+                        setFormData(prev => ({ ...prev, emailMarketingEnabled: newValue }));
+                        try {
+                          await updateProfile({
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            email: formData.email,
+                            phone: formData.phone,
+                            selectedLottery: formData.selectedLottery,
+                            notificationsEnabled: true,
+                            emailMarketingEnabled: newValue,
+                            notificationLotteries: (formData.notificationLotteries || []) as LotteryType[]
+                          });
+                          toast.success(`Email updates ${newValue ? 'enabled' : 'disabled'}`);
+                        } catch (error: any) {
+                          setFormData(prev => ({ ...prev, emailMarketingEnabled: previousValue }));
+                          toast.error(error.message || 'Failed to update email preference');
+                        }
+                      }}
+                      className="ms-3"
+                    />
+                  </div>
+                </Form.Group>
                 <div className="d-flex gap-2">
                   <Button type="submit" variant="primary" disabled={loading}>
                     <i className="bi bi-check me-1"></i>
@@ -751,6 +795,7 @@ const Profile: React.FC = () => {
                           phone: user?.phone || '',
                           selectedLottery: user?.selectedLottery || '',
                           predictionNotificationsEnabled: user?.predictionNotificationsEnabled !== undefined ? user.predictionNotificationsEnabled : true,
+                          emailMarketingEnabled: user?.emailMarketingEnabled !== undefined ? user.emailMarketingEnabled : true,
                           notificationLotteries: (user?.notificationLotteries && Array.isArray(user.notificationLotteries)) ? [...user.notificationLotteries] : []
                         });
                         setErrors({});

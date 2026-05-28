@@ -18,6 +18,7 @@ export interface User {
   role: 'user' | 'admin';
   notificationsEnabled: boolean;
   predictionNotificationsEnabled: boolean;
+  emailMarketingEnabled: boolean;
   notificationLotteries?: LotteryType[];
   isPhoneVerified: boolean;
   isActive?: boolean; // User active/inactive status
@@ -167,6 +168,7 @@ export interface ProfileUpdateForm {
   selectedLottery: string;
   notificationsEnabled: boolean;
   predictionNotificationsEnabled?: boolean;
+  emailMarketingEnabled?: boolean;
   notificationLotteries?: LotteryType[];
 }
 

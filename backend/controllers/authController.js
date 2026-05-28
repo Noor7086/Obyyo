@@ -4,6 +4,7 @@ import Wallet from '../models/Wallet.js';
 import { validationResult } from 'express-validator';
 import { sendWelcomeEmail, sendForgotPasswordEmail } from '../utils/emailService.js';
 import { sendOTP, normalizePhoneNumber } from '../utils/twilioService.js';
+import { createReachContact, deleteReachContact, findReachContactByEmail } from '../services/reachService.js';
 import bcrypt from 'bcryptjs';
 
 // Helper function to format date to ISO string
@@ -205,6 +206,7 @@ const login = async (req, res) => {
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
           predictionNotificationsEnabled: user.predictionNotificationsEnabled,
+          emailMarketingEnabled: user.emailMarketingEnabled,
           notificationLotteries: user.notificationLotteries || [],
           createdAt: getUserCreatedAt(user)
         },
@@ -279,6 +281,7 @@ const getMe = async (req, res) => {
           role: user.role,
           notificationsEnabled: user.notificationsEnabled,
           predictionNotificationsEnabled: user.predictionNotificationsEnabled,
+          emailMarketingEnabled: user.emailMarketingEnabled,
           notificationLotteries: notificationLotteriesList,
           isPhoneVerified: user.isPhoneVerified,
           createdAt: getUserCreatedAt(user)
@@ -299,7 +302,7 @@ const getMe = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, selectedLottery, notificationsEnabled, predictionNotificationsEnabled, notificationLotteries } = req.body;
+    const { firstName, lastName, email, phone, selectedLottery, notificationsEnabled, predictionNotificationsEnabled, emailMarketingEnabled, notificationLotteries } = req.body;
     const userId = req.user.userId;
 
     const user = await User.findById(userId);
@@ -310,12 +313,17 @@ const updateProfile = async (req, res) => {
       });
     }
 
+    // Snapshot the email-marketing flag BEFORE mutating, so we can detect the transition
+    // (off→on or on→off) and sync Hostinger Reach accordingly after save.
+    const previousEmailMarketing = user.emailMarketingEnabled;
+
     // Update fields
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (phone) user.phone = normalizePhoneNumber(phone);
     if (notificationsEnabled !== undefined) user.notificationsEnabled = notificationsEnabled;
     if (predictionNotificationsEnabled !== undefined) user.predictionNotificationsEnabled = predictionNotificationsEnabled;
+    if (emailMarketingEnabled !== undefined) user.emailMarketingEnabled = emailMarketingEnabled;
 
     // Update email if provided and different from current
     if (email && email !== user.email) {
@@ -347,6 +355,46 @@ const updateProfile = async (req, res) => {
 
     await user.save();
 
+    // Sync Hostinger Reach if the email-marketing flag transitioned. Fire-and-forget:
+    // the user response should not wait on the external API.
+    console.log('[updateProfile] email-marketing flag', {
+      previous: previousEmailMarketing,
+      incoming: emailMarketingEnabled,
+      willTrigger: emailMarketingEnabled !== undefined && previousEmailMarketing !== emailMarketingEnabled
+    });
+    if (emailMarketingEnabled !== undefined && previousEmailMarketing !== emailMarketingEnabled) {
+      if (emailMarketingEnabled) {
+        // Off → On: re-push to Reach.
+        createReachContact({
+          email: user.email,
+          name: user.firstName,
+          surname: user.lastName,
+          phone: user.phone,
+          note: 'opt-in via profile'
+        })
+          .then((result) => {
+            if (result.ok) {
+              User.updateOne(
+                { _id: userId },
+                { $set: { reachContactSynced: true, reachContactSyncedAt: new Date() } }
+              ).catch((e) => console.error('Failed to mark reach sync on user', e.message));
+            }
+          })
+          .catch((e) => console.error('Reach opt-in failed', e.message));
+      } else {
+        // On → Off: look up the contact's UUID by email, then delete it from Reach.
+        findReachContactByEmail(user.email)
+          .then((lookup) => (lookup.ok ? deleteReachContact(lookup.uuid) : null))
+          .then(() =>
+            User.updateOne(
+              { _id: userId },
+              { $set: { reachContactSynced: false, reachContactSyncedAt: null } }
+            )
+          )
+          .catch((e) => console.error('Reach opt-out failed', e.message));
+      }
+    }
+
     // Refetch from DB so response matches persisted data (including notificationLotteries)
     const savedUser = await User.findById(userId).lean();
     // Ensure notificationLotteries is always a plain string array for the API
@@ -375,6 +423,7 @@ const updateProfile = async (req, res) => {
           role: savedUser.role,
           notificationsEnabled: savedUser.notificationsEnabled,
           predictionNotificationsEnabled: savedUser.predictionNotificationsEnabled,
+          emailMarketingEnabled: savedUser.emailMarketingEnabled,
           notificationLotteries: savedNotificationLotteries,
           createdAt: getUserCreatedAt(savedUser)
         }
@@ -726,6 +775,25 @@ const verifyOTP = async (req, res) => {
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);
       }
+
+      // Fire-and-forget: push verified user to Hostinger Reach.
+      // Don't await; do not let Reach failures slow down or break registration.
+      createReachContact({
+        email: user.email,
+        name: user.firstName,
+        surname: user.lastName,
+        phone: user.phone,
+        note: 'registered'
+      })
+        .then((result) => {
+          if (result.ok) {
+            User.updateOne(
+              { _id: user._id },
+              { $set: { reachContactSynced: true, reachContactSyncedAt: new Date() } }
+            ).catch((e) => console.error('Failed to mark reach sync on user', e.message));
+          }
+        })
+        .catch((e) => console.error('Reach sync (verifyOTP) failed', e.message));
 
       // Generate final token
       const token = generateToken(user._id);

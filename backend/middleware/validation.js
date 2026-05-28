@@ -134,6 +134,11 @@ const validateProfileUpdate = [
     .optional()
     .isBoolean()
     .withMessage('Prediction notifications must be a boolean value'),
+
+  body('emailMarketingEnabled')
+    .optional()
+    .isBoolean()
+    .withMessage('Email marketing enabled must be a boolean value'),
   
   body('notificationLotteries')
     .optional()

@@ -107,6 +107,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Controls Hostinger Reach email-marketing subscription. Toggling off triggers Reach delete;
+  // toggling on (re)pushes the contact. Independent of SMS notification settings above.
+  emailMarketingEnabled: {
+    type: Boolean,
+    default: true
+  },
   // Up to 2 lotteries for SMS update notifications (one is preferred lottery). Plain string array; validation in middleware.
   notificationLotteries: {
     type: [String],
@@ -117,6 +123,14 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   resetPasswordCodeExpires: {
+    type: Date,
+    default: null
+  },
+  reachContactSynced: {
+    type: Boolean,
+    default: false
+  },
+  reachContactSyncedAt: {
     type: Date,
     default: null
   }

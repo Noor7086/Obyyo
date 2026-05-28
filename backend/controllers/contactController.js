@@ -1,4 +1,13 @@
 import Contact from '../models/Contact.js';
+import { createReachContact } from '../services/reachService.js';
+
+// Best-effort split of a single "name" string into first + last for Reach payload.
+const splitName = (raw) => {
+    if (!raw || typeof raw !== 'string') return { first: null, last: null };
+    const parts = raw.trim().split(/\s+/);
+    if (parts.length === 1) return { first: parts[0], last: null };
+    return { first: parts[0], last: parts.slice(1).join(' ') };
+};
 
 // @desc    Submit a contact message
 // @route   POST /api/contacts
@@ -20,6 +29,16 @@ export const submitMessage = async (req, res) => {
             subject,
             message
         });
+
+        // Fire-and-forget: push contact-form lead to Hostinger Reach.
+        // The "note" carries the subject so the lead is identifiable in Reach (capped at 75 chars by the service).
+        const { first, last } = splitName(name);
+        createReachContact({
+            email,
+            name: first,
+            surname: last,
+            note: `Contact form: ${subject}`
+        }).catch((e) => console.error('Reach sync (contact form) failed', e.message));
 
         res.status(201).json({
             success: true,
