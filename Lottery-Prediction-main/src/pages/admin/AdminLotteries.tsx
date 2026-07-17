@@ -55,12 +55,10 @@ const AdminLotteries: React.FC = () => {
     if (name.includes('lotto america') || name === 'lottoamerica') {
       return 1;
     } else if (name.includes('mega million') || name === 'megamillion') {
-      return 5;
+      return 3;
     } else if (name.includes('powerball')) {
       return 2;
     } else if (name.includes('gopher') || name === 'gopher5') {
-      return 1;
-    } else if (name.includes('pick 3') || name === 'pick3') {
       return 1;
     }
     
@@ -634,7 +632,7 @@ const AdminLotteries: React.FC = () => {
                           }}
                           required
                         >
-                          <option value="single">Single (e.g., Gopher 5, Pick 3)</option>
+                          <option value="single">Single (e.g., Gopher 5)</option>
                           <option value="double">Double (e.g., Powerball, Mega Millions)</option>
                         </select>
                         <small className="text-muted">

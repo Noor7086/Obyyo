@@ -117,7 +117,6 @@ const sendWelcomeEmail = async (user) => {
   const formatLotteryName = (lottery) => {
     const lotteryNames = {
       gopher5: 'Gopher 5',
-      pick3: 'Pick 3',
       lottoamerica: 'Lotto America',
       megamillion: 'Mega Millions',
       powerball: 'Powerball'

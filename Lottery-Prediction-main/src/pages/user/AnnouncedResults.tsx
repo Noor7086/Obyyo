@@ -9,8 +9,7 @@ const LOTTERY_NAMES: Record<string, { name: string; icon: string }> = {
   powerball: { name: 'Powerball', icon: '⚡' },
   megamillion: { name: 'Mega Millions', icon: '💰' },
   lottoamerica: { name: 'Lotto America', icon: '🇺🇸' },
-  gopher5: { name: 'Gopher 5', icon: '🎯' },
-  pick3: { name: 'Pick 3', icon: '🎲' }
+  gopher5: { name: 'Gopher 5', icon: '🎯' }
 };
 
 type OurPrediction = { whiteBalls?: number[]; redBalls?: number[] } | number[] | null;
@@ -26,7 +25,6 @@ interface RecentPredictionRow {
   actualResult?: {
     winningNumbers?: { whiteBalls?: number[]; redBalls?: number[] };
     winningNumbersSingle?: number[];
-    winningNumbersPick3?: number[];
   } | null;
 }
 
@@ -107,11 +105,6 @@ const AnnouncedResults: React.FC = () => {
       return actualResult.winningNumbersSingle && actualResult.winningNumbersSingle.length > 0 
         ? actualResult.winningNumbersSingle : null;
     }
-    if (lt === 'pick3') {
-      return actualResult.winningNumbersPick3 && actualResult.winningNumbersPick3.length > 0 
-        ? actualResult.winningNumbersPick3 : null;
-    }
-    
     // For powerball, megamillion, lottoamerica
     if (actualResult.winningNumbers && 
         ((actualResult.winningNumbers.whiteBalls && actualResult.winningNumbers.whiteBalls.length > 0) || 

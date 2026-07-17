@@ -25,8 +25,8 @@ export interface SEOData {
 
 const defaultSEO: SEOData = {
   title: 'Obyyo - Lottery Prediction Platform',
-  description: 'Enhance your lottery winning odds with 80-100% accurate predictions. Reduce waste on low vibration numbers. Get 7 days free trial for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America.',
-  keywords: 'lottery prediction, lottery numbers, winning odds, powerball, megamillion, gopher5, pick3, lotto america, lottery analysis, number prediction',
+  description: 'Enhance your lottery winning odds with 80-100% accurate predictions. Reduce waste on low vibration numbers. Get 7 days free trial for Powerball, Mega Million, Gopher 5, and Lotto America.',
+  keywords: 'lottery prediction, lottery numbers, winning odds, powerball, megamillion, gopher5, lotto america, lottery analysis, number prediction',
   image: '/logo.png',
   url: 'https://obyyo.com',
   type: 'website',

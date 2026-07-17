@@ -44,7 +44,7 @@ const lotteries = [
     code: 'MEGAMILLION',
     type: 'double',
     description: 'Pick 5 from 70 + 1 from 25. One of the largest lottery jackpots in the world.',
-    price: 5,
+    price: 3,
     currency: 'USD',
     state: 'Multi-State',
     country: 'USA',
@@ -110,31 +110,6 @@ const lotteries = [
     singleSelection: {
       pickCount: 5,
       totalNumbers: 47
-    }
-  },
-  {
-    name: 'Pick 3',
-    code: 'PICK3',
-    type: 'single',
-    description: 'Pick 3 numbers from 0-9. Daily drawings with multiple ways to win.',
-    price: 1,
-    currency: 'USD',
-    state: 'Minnesota',
-    country: 'USA',
-    officialWebsite: 'https://www.mnlottery.com/games/draw-games/pick-3',
-    isActive: true,
-    drawSchedule: [
-      { day: 'monday', time: '18:00' },
-      { day: 'tuesday', time: '18:00' },
-      { day: 'wednesday', time: '18:00' },
-      { day: 'thursday', time: '18:00' },
-      { day: 'friday', time: '18:00' },
-      { day: 'saturday', time: '18:00' },
-      { day: 'sunday', time: '18:00' }
-    ],
-    singleSelection: {
-      pickCount: 3,
-      totalNumbers: 10  // 0-9 is 10 numbers
     }
   }
 ];

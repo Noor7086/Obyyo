@@ -30,7 +30,7 @@ export interface AuthUser extends User {
 }
 
 // Lottery Types
-export type LotteryType = 'gopher5' | 'pick3' | 'lottoamerica' | 'megamillion' | 'powerball';
+export type LotteryType = 'gopher5' | 'lottoamerica' | 'megamillion' | 'powerball';
 
 export interface Lottery {
   id: string;
@@ -84,7 +84,6 @@ export interface Prediction {
     redBalls?: number[];
   } | number[];
   nonViableNumbersSingle?: number[];
-  nonViableNumbersPick3?: number[];
   price: number;
   notes?: string;
   downloadCount: number;

@@ -20,7 +20,6 @@ interface Result {
     redBalls?: number[];
   };
   winningNumbersSingle?: number[];
-  winningNumbersPick3?: number[];
   jackpot?: number;
   winners?: {
     jackpot: number;
@@ -161,8 +160,7 @@ const UserResults: React.FC = () => {
       'powerball': '⚡',
       'megamillion': '💰',
       'lottoamerica': '🇺🇸',
-      'gopher5': '🎯',
-      'pick3': '🎲'
+      'gopher5': '🎯'
     };
     return iconMap[lotteryType.toLowerCase()] || '🎰';
   };
@@ -207,18 +205,6 @@ const UserResults: React.FC = () => {
           <h6 className="fw-bold mb-2">Winning Numbers:</h6>
           <div className="d-flex flex-wrap gap-2">
             {result.winningNumbersSingle.map((num, idx) => (
-              <span key={idx} className="badge bg-primary fs-5 px-3 py-2">{num}</span>
-            ))}
-          </div>
-        </div>
-      );
-    } else if (result.winningNumbersPick3 && result.winningNumbersPick3.length > 0) {
-      // Pick 3 lottery
-      return (
-        <div>
-          <h6 className="fw-bold mb-2">Winning Numbers:</h6>
-          <div className="d-flex flex-wrap gap-2">
-            {result.winningNumbersPick3.map((num, idx) => (
               <span key={idx} className="badge bg-primary fs-5 px-3 py-2">{num}</span>
             ))}
           </div>

@@ -133,7 +133,6 @@ const Navbar: React.FC = () => {
 
   const lotteryTypes: { type: LotteryType; name: string }[] = [
     { type: 'gopher5', name: 'Gopher 5' },
-    { type: 'pick3', name: 'Pick 3' },
     { type: 'lottoamerica', name: 'Lotto America' },
     { type: 'megamillion', name: 'Mega Million' },
     { type: 'powerball', name: 'Powerball' }

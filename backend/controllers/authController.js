@@ -344,7 +344,7 @@ const updateProfile = async (req, res) => {
     }
 
     // Update notification lotteries (max 2: preferred + one more, validated by middleware)
-    const validLotteries = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    const validLotteries = ['gopher5', 'lottoamerica', 'megamillion', 'powerball'];
     let notificationLotteriesToSave = user.notificationLotteries || [];
     if (notificationLotteries !== undefined) {
       notificationLotteriesToSave = Array.isArray(notificationLotteries)

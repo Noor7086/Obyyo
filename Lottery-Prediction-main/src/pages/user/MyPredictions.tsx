@@ -90,8 +90,7 @@ const MyPredictions: React.FC = () => {
       'powerball': '⚡',
       'megamillion': '💰',
       'lottoamerica': '🇺🇸',
-      'gopher5': '🎯',
-      'pick3': '🎲'
+      'gopher5': '🎯'
     };
     return iconMap[lotteryType.toLowerCase()] || '🎰';
   };
@@ -143,15 +142,6 @@ const MyPredictions: React.FC = () => {
       const nonViableSingle = (prediction as any).nonViableNumbersSingle || [];
       if (Array.isArray(nonViableSingle) && nonViableSingle.length > 0) {
         const filtered = nonViableSingle.filter((n: any) => n != null);
-        if (filtered.length > 0) {
-          return calculateViableFromNonViable(prediction.lotteryType, filtered);
-        }
-      }
-    } else if (prediction.lotteryType === 'pick3') {
-      // Pick 3 - check nonViableNumbersPick3
-      const nonViablePick3 = (prediction as any).nonViableNumbersPick3 || [];
-      if (Array.isArray(nonViablePick3) && nonViablePick3.length > 0) {
-        const filtered = nonViablePick3.filter((n: any) => n != null);
         if (filtered.length > 0) {
           return calculateViableFromNonViable(prediction.lotteryType, filtered);
         }

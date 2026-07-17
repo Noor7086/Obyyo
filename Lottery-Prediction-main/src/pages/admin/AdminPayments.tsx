@@ -143,7 +143,6 @@ const AdminPayments: React.FC = () => {
       megamillion: '💰',
       lottoamerica: '🇺🇸',
       gopher5: '🎯',
-      pick3: '🎲',
       wallet_deposit: '💳'
     };
     return icons[lotteryType?.toLowerCase()] || '🎰';
@@ -158,8 +157,7 @@ const AdminPayments: React.FC = () => {
       powerball: 'Powerball',
       megamillion: 'Mega Million',
       lottoamerica: 'Lotto America',
-      gopher5: 'Gopher 5',
-      pick3: 'Pick 3'
+      gopher5: 'Gopher 5'
     };
 
     return lotteryNames[lotteryType?.toLowerCase()] || lotteryType || 'N/A';
@@ -195,7 +193,6 @@ const AdminPayments: React.FC = () => {
                   <option value="megamillion">Mega Million</option>
                   <option value="lottoamerica">Lotto America</option>
                   <option value="gopher5">Gopher 5</option>
-                  <option value="pick3">Pick 3</option>
 
                 </select>
               </div>

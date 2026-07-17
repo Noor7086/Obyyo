@@ -114,7 +114,7 @@ const FAQ: React.FC = () => {
     {
       question: 'What lottery games does Obyyo support?',
       answer:
-        'We support all major lottery games including Powerball, Mega Millions, Lotto America, Gopher 5, and Pick 3. Our system continuously analyzes patterns for each specific lottery to provide the most accurate predictions.'
+        'We support all major lottery games including Powerball, Mega Millions, Lotto America, and Gopher 5. Our system continuously analyzes patterns for each specific lottery to provide the most accurate predictions.'
     },
     {
       question: "How accurate are Obyyo's lottery predictions?",

@@ -63,13 +63,6 @@ const HowItWorks: React.FC = () => {
       description: 'We will identify 10–15 Red balls from 1–47 balls to avoid 15–24 hours before the draw.',
       process: 'Customers can then manually select 5 red balls of their choice or generate Quick Picks from the unaffected numbers.',
       color: 'success'
-    },
-    {
-      name: 'Pick 3 (Minnesota)',
-      type: 'Single Selection',
-      description: 'We will identify 2–3 Red balls from 0–9 balls to avoid 15–24 hours before the draw.',
-      process: 'Customers can then manually select 3 red balls of their choice or generate Quick Picks from the unaffected numbers.',
-      color: 'primary'
     }
   ];
 

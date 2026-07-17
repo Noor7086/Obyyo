@@ -32,12 +32,6 @@ const NumberGenerator: React.FC = () => {
       description: 'State-specific lottery games',
       icon: '🏛️'
     },
-    {
-      id: 'daily',
-      name: 'Daily Games',
-      description: 'Games with daily drawings',
-      icon: '📅'
-    }
   ];
 
   const lotteryTypes = [
@@ -80,16 +74,6 @@ const NumberGenerator: React.FC = () => {
       bonusNumbers: 0,
       pickCount: 5,
       category: 'state'
-    },
-    {
-      id: 'pick3',
-      name: 'Pick 3',
-      description: 'Pick 3 numbers from 0-9',
-      icon: '🎲',
-      mainNumbers: 10,
-      bonusNumbers: 0,
-      pickCount: 3,
-      category: 'daily'
     }
   ];
 
@@ -106,7 +90,7 @@ const NumberGenerator: React.FC = () => {
       };
     }
 
-    // Single pool lotteries (gopher5, pick3, etc.)
+    // Single pool lotteries (gopher5, etc.)
     return { main: toNums(apiValue), bonus: [] };
   };
 
@@ -208,8 +192,8 @@ const NumberGenerator: React.FC = () => {
     if (!lottery) return { main: [], bonus: [] };
 
     const mainViable: number[] = [];
-    const mainStart = lotteryId === 'pick3' ? 0 : 1;
-    const mainEnd = lotteryId === 'pick3' ? 9 : lottery.mainNumbers;
+    const mainStart = 1;
+    const mainEnd = lottery.mainNumbers;
     for (let i = mainStart; i <= mainEnd; i++) {
       if (!excluded.main.includes(i)) {
         mainViable.push(i);
@@ -248,13 +232,12 @@ const NumberGenerator: React.FC = () => {
       }
 
       // Safety: if exclusions make generation impossible for unique-pick lotteries
-      const isPick3 = selectedLottery === 'pick3';
       if (viableNumbers.main.length === 0) {
         setGeneratedNumbers(null);
         setLoading(false);
         return;
       }
-      if (!isPick3 && viableNumbers.main.length < lottery.pickCount) {
+      if (viableNumbers.main.length < lottery.pickCount) {
         setGeneratedNumbers(null);
         setLoading(false);
         return;
@@ -263,13 +246,7 @@ const NumberGenerator: React.FC = () => {
       for (let i = 0; i < combinationsToGenerate; i++) {
         const mainNumbers: number[] = [];
 
-        if (isPick3) {
-          // Pick3 allows repeating digits; keep order
-          for (let j = 0; j < lottery.pickCount; j++) {
-            const randomIndex = Math.floor(Math.random() * viableNumbers.main.length);
-            mainNumbers.push(viableNumbers.main[randomIndex]);
-          }
-        } else {
+        {
           const usedNumbers = new Set<number>();
           while (mainNumbers.length < lottery.pickCount) {
             const randomIndex = Math.floor(Math.random() * viableNumbers.main.length);

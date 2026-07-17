@@ -10,9 +10,9 @@ import toast from 'react-hot-toast';
 
 const Predictions: React.FC = () => {
   useSEO({
-    title: 'Lottery Predictions - Powerball, Mega Million, Gopher 5, Pick 3, Lotto America | Obyyo',
-    description: 'Browse and purchase accurate lottery predictions for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America. Get 80-100% accurate predictions to improve your winning odds.',
-    keywords: 'lottery predictions, powerball predictions, mega million predictions, gopher 5 predictions, pick 3 predictions, lotto america predictions, buy lottery predictions',
+    title: 'Lottery Predictions - Powerball, Mega Million, Gopher 5, Lotto America | Obyyo',
+    description: 'Browse and purchase accurate lottery predictions for Powerball, Mega Million, Gopher 5, and Lotto America. Get 80-100% accurate predictions to improve your winning odds.',
+    keywords: 'lottery predictions, powerball predictions, mega million predictions, gopher 5 predictions, lotto america predictions, buy lottery predictions',
     url: 'https://obyyo.com/predictions',
     canonical: 'https://obyyo.com/predictions'
   });
@@ -100,7 +100,7 @@ const Predictions: React.FC = () => {
 
       // Get lottery type directly from URL to avoid state timing issues
       const lotteryTypeFromUrl = searchParams.get('lottery');
-      const validLotteryTypes: LotteryType[] = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+      const validLotteryTypes: LotteryType[] = ['gopher5', 'lottoamerica', 'megamillion', 'powerball'];
 
       if (lotteryTypeFromUrl && validLotteryTypes.includes(lotteryTypeFromUrl.toLowerCase() as LotteryType)) {
         const normalizedType = lotteryTypeFromUrl.toLowerCase() as LotteryType;
@@ -158,7 +158,7 @@ const Predictions: React.FC = () => {
   // Read URL parameter and set selected lottery
   useEffect(() => {
     const lotteryType = searchParams.get('lottery');
-    const validLotteryTypes: LotteryType[] = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    const validLotteryTypes: LotteryType[] = ['gopher5', 'lottoamerica', 'megamillion', 'powerball'];
 
     console.log('🔍 URL parameter effect - lotteryType from URL:', lotteryType);
     console.log('🔍 URL parameter effect - current selectedLottery:', selectedLottery);
@@ -344,9 +344,7 @@ const Predictions: React.FC = () => {
       'lottoamerica': '🇺🇸',
       'LOTTOAMERICA': '🇺🇸',
       'gopher5': '🎯',
-      'GOPHER5': '🎯',
-      'pick3': '🎲',
-      'PICK3': '🎲'
+      'GOPHER5': '🎯'
     };
     return iconMap[lottery.id] || iconMap[lottery.code] || '🎰';
   };
@@ -680,7 +678,7 @@ const Predictions: React.FC = () => {
     // First, try to use viableNumbers from backend (preferred)
     if (prediction.viableNumbers) {
       if (Array.isArray(prediction.viableNumbers)) {
-        // Single selection (Gopher 5, Pick 3)
+        // Single selection (Gopher 5)
         const viable = prediction.viableNumbers.filter(n => n != null);
         if (viable.length > 0) {
           return viable;
@@ -713,15 +711,6 @@ const Predictions: React.FC = () => {
       const nonViableSingle = (prediction as any).nonViableNumbersSingle || [];
       if (Array.isArray(nonViableSingle) && nonViableSingle.length > 0) {
         const filtered = nonViableSingle.filter((n: any) => n != null);
-        if (filtered.length > 0) {
-          return calculateViableFromNonViable(prediction.lotteryType, filtered);
-        }
-      }
-    } else if (prediction.lotteryType === 'pick3') {
-      // Pick 3 - check nonViableNumbersPick3
-      const nonViablePick3 = (prediction as any).nonViableNumbersPick3 || [];
-      if (Array.isArray(nonViablePick3) && nonViablePick3.length > 0) {
-        const filtered = nonViablePick3.filter((n: any) => n != null);
         if (filtered.length > 0) {
           return calculateViableFromNonViable(prediction.lotteryType, filtered);
         }

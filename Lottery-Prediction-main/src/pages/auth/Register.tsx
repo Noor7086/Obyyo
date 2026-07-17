@@ -59,7 +59,6 @@ const Register: React.FC = () => {
 
   const lotteryOptions: { value: LotteryType; label: string; description: string }[] = [
     { value: 'gopher5', label: 'Gopher 5 (Minnesota)', description: 'Pick 5 numbers from 1-47' },
-    { value: 'pick3', label: 'Pick 3 (Minnesota)', description: 'Pick 3 numbers from 0-9' },
     { value: 'lottoamerica', label: 'Lotto America (USA)', description: 'Pick 5 from 52 + 1 from 10' },
     { value: 'megamillion', label: 'Mega Million (USA)', description: 'Pick 5 from 70 + 1 from 25' },
     { value: 'powerball', label: 'Powerball (USA)', description: 'Pick 5 from 69 + 1 from 26' }

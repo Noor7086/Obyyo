@@ -62,7 +62,7 @@ const validateRegistration = [
     .withMessage('Please select a valid country'),
   
   body('selectedLottery')
-    .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
+    .isIn(['gopher5', 'lottoamerica', 'megamillion', 'powerball'])
     .withMessage('Please select a valid lottery type'),
   
   body('consentSMSVerification')
@@ -122,7 +122,7 @@ const validateProfileUpdate = [
   
   body('selectedLottery')
     .optional()
-    .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
+    .isIn(['gopher5', 'lottoamerica', 'megamillion', 'powerball'])
     .withMessage('Please select a valid lottery type'),
   
   body('notificationsEnabled')
@@ -145,7 +145,7 @@ const validateProfileUpdate = [
     .isArray()
     .withMessage('Notification lotteries must be an array'),
   body('notificationLotteries.*')
-    .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
+    .isIn(['gopher5', 'lottoamerica', 'megamillion', 'powerball'])
     .withMessage('Each notification lottery must be a valid lottery type'),
   body('notificationLotteries')
     .optional()
@@ -245,7 +245,7 @@ const validateResetPassword = [
 // Lottery type validation
 const validateLotteryType = [
   param('lotteryType')
-    .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
+    .isIn(['gopher5', 'lottoamerica', 'megamillion', 'powerball'])
     .withMessage('Invalid lottery type'),
   
   handleValidationErrors
@@ -300,7 +300,7 @@ const validateWalletTopUp = [
 // Admin prediction upload validation
 const validatePredictionUpload = [
   body('lotteryType')
-    .isIn(['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'])
+    .isIn(['gopher5', 'lottoamerica', 'megamillion', 'powerball'])
     .withMessage('Invalid lottery type'),
   
   body('drawDate')

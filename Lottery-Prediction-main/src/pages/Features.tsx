@@ -121,13 +121,6 @@ const Features: React.FC = () => {
       description: "Minnesota's state lottery with daily draws",
       features: ["5 Red balls from 1-47", "Draw is held three times a week", "State-specific game"],
       color: "success"
-    },
-    {
-      name: "Pick 3",
-      code: "pick3",
-      description: "Simple 3-digit lottery with multiple daily draws",
-      features: ["3 Red balls from 0-9", "Multiple daily draws", "Various play options"],
-      color: "primary"
     }
   ];
 

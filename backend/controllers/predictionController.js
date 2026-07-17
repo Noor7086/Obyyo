@@ -34,7 +34,7 @@ const getPredictions = async (req, res) => {
     const { lotteryType } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    const validLotteryTypes = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    const validLotteryTypes = ['gopher5', 'lottoamerica', 'megamillion', 'powerball'];
     if (!validLotteryTypes.includes(lotteryType)) {
       return res.status(400).json({
         success: false,
@@ -102,7 +102,7 @@ const getLatestPrediction = async (req, res) => {
   try {
     const { lotteryType } = req.params;
 
-    const validLotteryTypes = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    const validLotteryTypes = ['gopher5', 'lottoamerica', 'megamillion', 'powerball'];
     if (!validLotteryTypes.includes(lotteryType)) {
       return res.status(400).json({
         success: false,
@@ -484,19 +484,6 @@ const getPredictionDetails = async (req, res) => {
         viableNumbers = pred.viableNumbersSingle.filter(n => n != null && n !== undefined);
         console.log('⚠️ Using viableNumbersSingle field (non-viable not found)');
       }
-    } else if (prediction.lotteryType === 'pick3') {
-      // Pick 3
-      const nonViablePick3 = pred.nonViableNumbersPick3 || [];
-
-      // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
-      if (nonViablePick3.length > 0) {
-        console.log('✅ Calculating viable numbers from non-viable numbers (source of truth)');
-        viableNumbers = calculateViableFromNonViable(prediction.lotteryType, nonViablePick3);
-      } else if (pred.viableNumbersPick3 && Array.isArray(pred.viableNumbersPick3) && pred.viableNumbersPick3.length > 0) {
-        // Only use viableNumbersPick3 if non-viable doesn't exist
-        viableNumbers = pred.viableNumbersPick3.filter(n => n != null && n !== undefined);
-        console.log('⚠️ Using viableNumbersPick3 field (non-viable not found)');
-      }
     }
 
     console.log('=== SIMPLE PREDICTION DETAILS ===');
@@ -749,17 +736,6 @@ const getMyPurchases = async (req, res) => {
           } else if (pred.viableNumbersSingle && Array.isArray(pred.viableNumbersSingle) && pred.viableNumbersSingle.length > 0) {
             // Only use viableNumbersSingle if non-viable doesn't exist
             viableNumbers = pred.viableNumbersSingle.filter(n => n != null && n !== undefined);
-          }
-        } else if (prediction.lotteryType === 'pick3') {
-          // Pick 3
-          const nonViablePick3 = pred.nonViableNumbersPick3 || [];
-
-          // If non-viable numbers exist, ALWAYS calculate viable from them (source of truth)
-          if (nonViablePick3.length > 0) {
-            viableNumbers = calculateViableFromNonViable(prediction.lotteryType, nonViablePick3);
-          } else if (pred.viableNumbersPick3 && Array.isArray(pred.viableNumbersPick3) && pred.viableNumbersPick3.length > 0) {
-            // Only use viableNumbersPick3 if non-viable doesn't exist
-            viableNumbers = pred.viableNumbersPick3.filter(n => n != null && n !== undefined);
           }
         }
 

@@ -99,12 +99,6 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li className="mb-2">
-                <Link to="/predictions?lottery=pick3" className="text-light text-decoration-none">
-                  <i className="bi bi-dice-3 me-2"></i>
-                  Pick 3
-                </Link>
-              </li>
-              <li className="mb-2">
                 <Link to="/predictions?lottery=lottoamerica" className="text-light text-decoration-none">
                   <i className="bi bi-flag me-2"></i>
                   Lotto America

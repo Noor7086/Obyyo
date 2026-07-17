@@ -34,8 +34,7 @@ const AdminPredictions: React.FC = () => {
     winningNumbers: {
       whiteBalls: [] as number[],
       redBalls: [] as number[],
-      singleNumbers: [] as number[],
-      pick3Numbers: [] as number[]
+      singleNumbers: [] as number[]
     },
     jackpot: '',
     winners: {
@@ -67,10 +66,6 @@ const AdminPredictions: React.FC = () => {
     gopher5: {
       numbers: { min: 1, max: 47, pickCount: 5, label: 'Numbers (1-47)' },
       type: 'single' as const
-    },
-    pick3: {
-      numbers: { min: 0, max: 9, pickCount: 3, label: 'Numbers (0-9)' },
-      type: 'pick3' as const
     }
   };
 
@@ -83,7 +78,6 @@ const AdminPredictions: React.FC = () => {
     whiteBalls: [] as number[],
     redBalls: [] as number[],
     singleNumbers: [] as number[],
-    pick3Numbers: [] as number[],
     price: '' as any,
     notes: ''
   });
@@ -104,10 +98,6 @@ const AdminPredictions: React.FC = () => {
     },
     gopher5: {
       days: ['monday', 'wednesday', 'friday'],
-      time: '18:17' // 6:17 PM Minnesota Time
-    },
-    pick3: {
-      days: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
       time: '18:17' // 6:17 PM Minnesota Time
     }
   };
@@ -172,10 +162,9 @@ const AdminPredictions: React.FC = () => {
   const getPriceByLotteryType = (lotteryType: LotteryType): number => {
     const priceMap: Record<LotteryType, number> = {
       'lottoamerica': 1,
-      'megamillion': 5,
+      'megamillion': 3,
       'powerball': 2,
-      'gopher5': 1,
-      'pick3': 1
+      'gopher5': 1
     };
     return priceMap[lotteryType] || 0;
   };
@@ -198,7 +187,6 @@ const AdminPredictions: React.FC = () => {
     { value: 'powerball', label: 'Powerball' },
     { value: 'megamillion', label: 'Mega Millions' },
     { value: 'lottoamerica', label: 'Lotto America' },
-    { value: 'pick3', label: 'Pick 3' },
     { value: 'gopher5', label: 'Gopher 5' }
   ];
 
@@ -258,10 +246,6 @@ const AdminPredictions: React.FC = () => {
     }
     if (lt === 'gopher5') {
       const arr = pred.nonViableNumbersSingle || pred.viableNumbersSingle || [];
-      return Array.isArray(arr) ? arr.join(', ') || '—' : '—';
-    }
-    if (lt === 'pick3') {
-      const arr = pred.nonViableNumbersPick3 || pred.viableNumbersPick3 || [];
       return Array.isArray(arr) ? arr.join(', ') || '—' : '—';
     }
     return '—';
@@ -332,7 +316,7 @@ const AdminPredictions: React.FC = () => {
       } else if (mode === 'lottery') {
         const lottery = filterLottery !== 'all' ? filterLottery : undefined;
         if (!lottery) {
-          toast.error('Choose a lottery filter (e.g. Pick 3) or use "Export all".');
+          toast.error('Choose a lottery filter (e.g. Gopher 5) or use "Export all".');
           setExportPdfLoading(false);
           return;
         }
@@ -517,10 +501,6 @@ const AdminPredictions: React.FC = () => {
         const numbers = newPrediction.singleNumbers.filter(n => n != null && !isNaN(n));
         predictionData.nonViableNumbersSingle = numbers;
         console.log('📤 FRONTEND - Sending nonViableNumbersSingle:', numbers);
-      } else if (config.type === 'pick3') {
-        const numbers = newPrediction.pick3Numbers.filter(n => n != null && !isNaN(n));
-        predictionData.nonViableNumbersPick3 = numbers;
-        console.log('📤 FRONTEND - Sending nonViableNumbersPick3:', numbers);
       }
 
       console.log('📤 FRONTEND - Full predictionData being sent:', JSON.stringify(predictionData, null, 2));
@@ -623,20 +603,16 @@ const AdminPredictions: React.FC = () => {
           const redBalls = Array.isArray(latestResult.winningNumbers?.redBalls) 
             ? latestResult.winningNumbers.redBalls 
             : (latestResult.winningNumbers?.redBalls ? [latestResult.winningNumbers.redBalls] : []);
-          const singleNumbers = Array.isArray(latestResult.winningNumbersSingle) 
-            ? latestResult.winningNumbersSingle 
+          const singleNumbers = Array.isArray(latestResult.winningNumbersSingle)
+            ? latestResult.winningNumbersSingle
             : (latestResult.winningNumbersSingle ? [latestResult.winningNumbersSingle] : []);
-          const pick3Numbers = Array.isArray(latestResult.winningNumbersPick3) 
-            ? latestResult.winningNumbersPick3 
-            : (latestResult.winningNumbersPick3 ? [latestResult.winningNumbersPick3] : []);
-          
+
           const editData = {
             drawDate: new Date(latestResult.drawDate).toISOString().split('T')[0],
             winningNumbers: {
               whiteBalls: whiteBalls,
               redBalls: redBalls,
-              singleNumbers: singleNumbers,
-              pick3Numbers: pick3Numbers
+              singleNumbers: singleNumbers
             },
             jackpot: latestResult.jackpot?.toString() || '',
             winners: {
@@ -658,6 +634,10 @@ const AdminPredictions: React.FC = () => {
       }
 
       const config = lotteryConfigs[selectedPredictionForResult.lotteryType];
+      if (!config) {
+        toast.error('This lottery type is no longer supported.');
+        return;
+      }
       let winningNumbers: any = {};
 
       // No validation - allow any number of winning numbers
@@ -669,10 +649,6 @@ const AdminPredictions: React.FC = () => {
       } else if (config.type === 'single') {
         winningNumbers = {
           singleNumbers: resultData.winningNumbers.singleNumbers || []
-        };
-      } else if (config.type === 'pick3') {
-        winningNumbers = {
-          pick3Numbers: resultData.winningNumbers.pick3Numbers || []
         };
       }
 
@@ -720,6 +696,10 @@ const AdminPredictions: React.FC = () => {
 
     try {
       const config = lotteryConfigs[selectedPredictionForResult?.lotteryType || 'powerball'];
+      if (!config) {
+        toast.error('This lottery type is no longer supported.');
+        return;
+      }
       let winningNumbers: any = {};
 
       // No validation - allow any number of winning numbers
@@ -731,10 +711,6 @@ const AdminPredictions: React.FC = () => {
       } else if (config.type === 'single') {
         winningNumbers = {
           singleNumbers: resultData.winningNumbers.singleNumbers || []
-        };
-      } else if (config.type === 'pick3') {
-        winningNumbers = {
-          pick3Numbers: resultData.winningNumbers.pick3Numbers || []
         };
       }
 
@@ -765,8 +741,7 @@ const AdminPredictions: React.FC = () => {
           winningNumbers: {
             whiteBalls: [],
             redBalls: [],
-            singleNumbers: [],
-            pick3Numbers: []
+            singleNumbers: []
           },
           jackpot: '',
           winners: {
@@ -822,7 +797,6 @@ const AdminPredictions: React.FC = () => {
       whiteBalls: [],
       redBalls: [],
       singleNumbers: [],
-      pick3Numbers: [],
       price: '' as any,
       notes: ''
     });
@@ -866,11 +840,14 @@ const AdminPredictions: React.FC = () => {
     // Extract non-viable numbers based on lottery type
     // The admin endpoint returns raw MongoDB documents with separate fields
     const config = lotteryConfigs[prediction.lotteryType];
+    if (!config) {
+      toast.error('This lottery type is no longer supported.');
+      return;
+    }
     const predAny = prediction as any; // Access raw fields
     let whiteBalls: number[] = [];
     let redBalls: number[] = [];
     let singleNumbers: number[] = [];
-    let pick3Numbers: number[] = [];
 
     // Handle the nonViableNumbers data structure from raw model (preferred), fall back to viableNumbers (legacy)
     if (config.type === 'double') {
@@ -898,13 +875,6 @@ const AdminPredictions: React.FC = () => {
       } else if (Array.isArray(predAny.viableNumbersSingle)) {
         singleNumbers = predAny.viableNumbersSingle;
       }
-    } else if (config.type === 'pick3') {
-      // Check nonViableNumbersPick3 first, then fall back to viableNumbersPick3 (legacy)
-      if (Array.isArray(predAny.nonViableNumbersPick3)) {
-        pick3Numbers = predAny.nonViableNumbersPick3;
-      } else if (Array.isArray(predAny.viableNumbersPick3)) {
-        pick3Numbers = predAny.viableNumbersPick3;
-      }
     }
 
     // Format date and time for input fields
@@ -921,7 +891,6 @@ const AdminPredictions: React.FC = () => {
       whiteBalls,
       redBalls,
       singleNumbers,
-      pick3Numbers,
       price: prediction.price,
       notes: prediction.notes || ''
     });
@@ -950,26 +919,10 @@ const AdminPredictions: React.FC = () => {
     setFieldErrors({});
   };
 
-  const toggleNumber = (number: number, type: 'whiteBalls' | 'redBalls' | 'singleNumbers' | 'pick3Numbers') => {
+  const toggleNumber = (number: number, type: 'whiteBalls' | 'redBalls' | 'singleNumbers') => {
     setNewPrediction(prev => {
       const currentNumbers = prev[type];
-      
-      // For Pick 3, we allow duplicates but also want a way to remove.
-      // Standard behavior: clicking a number adds it. Clicking it again can either add another OR toggle.
-      // Let's make Pick 3 prediction selection also support duplicates to match results.
-      if (type === 'pick3Numbers') {
-        const isSelected = currentNumbers.includes(number);
-        // Toggle behavior for "avoid" list is usually simpler, but let's allow duplicates if already present
-        // Actually, for "avoid" lists duplicates don't make sense.
-        // But for results they do. Let's keep toggle for predictions, but allow duplicates for results.
-        return {
-          ...prev,
-          [type]: isSelected
-            ? currentNumbers.filter(n => n !== number)
-            : [...currentNumbers, number].sort((a, b) => a - b)
-        };
-      }
-      
+
       const isSelected = currentNumbers.includes(number);
       return {
         ...prev,
@@ -980,15 +933,7 @@ const AdminPredictions: React.FC = () => {
     });
   };
 
-  const removeNumberAtIndex = (index: number, type: 'whiteBalls' | 'redBalls' | 'singleNumbers' | 'pick3Numbers') => {
-    setNewPrediction(prev => ({
-      ...prev,
-      [type]: prev[type].filter((_, i) => i !== index)
-    }));
-  };
-
-
-  const clearNumbers = (type: 'whiteBalls' | 'redBalls' | 'singleNumbers' | 'pick3Numbers') => {
+  const clearNumbers = (type: 'whiteBalls' | 'redBalls' | 'singleNumbers') => {
     setNewPrediction(prev => ({
       ...prev,
       [type]: []
@@ -1003,8 +948,7 @@ const AdminPredictions: React.FC = () => {
     onRemoveIndex?: (index: number) => void;
     onClear: () => void;
     label: string;
-    isPick3?: boolean;
-  }> = ({ min, max, selected, onToggle, onRemoveIndex, onClear, label, isPick3 }) => {
+  }> = ({ min, max, selected, onToggle, onRemoveIndex, onClear, label }) => {
     const numbers = Array.from({ length: max - min + 1 }, (_, i) => i + min);
     
     return (
@@ -1047,9 +991,9 @@ const AdminPredictions: React.FC = () => {
                     fontSize: '0.9rem'
                   }}
                   onClick={() => onToggle(num)}
-                  title={isPick3 ? 'Click to add' : (isSelected ? 'Click to deselect' : 'Click to select')}
+                  title={isSelected ? 'Click to deselect' : 'Click to select'}
                 >
-                  {num.toString().padStart(isPick3 ? 1 : 2, '0')}
+                  {num.toString().padStart(2, '0')}
                 </button>
               );
             })}
@@ -1378,20 +1322,16 @@ const AdminPredictions: React.FC = () => {
                                   const redBalls = Array.isArray(latestResult.winningNumbers?.redBalls) 
                                     ? latestResult.winningNumbers.redBalls 
                                     : (latestResult.winningNumbers?.redBalls ? [latestResult.winningNumbers.redBalls] : []);
-                                  const singleNumbers = Array.isArray(latestResult.winningNumbersSingle) 
-                                    ? latestResult.winningNumbersSingle 
+                                  const singleNumbers = Array.isArray(latestResult.winningNumbersSingle)
+                                    ? latestResult.winningNumbersSingle
                                     : (latestResult.winningNumbersSingle ? [latestResult.winningNumbersSingle] : []);
-                                  const pick3Numbers = Array.isArray(latestResult.winningNumbersPick3) 
-                                    ? latestResult.winningNumbersPick3 
-                                    : (latestResult.winningNumbersPick3 ? [latestResult.winningNumbersPick3] : []);
-                                  
+
                                   const editData = {
                                     drawDate: new Date(latestResult.drawDate).toISOString().split('T')[0],
                                     winningNumbers: {
                                       whiteBalls: whiteBalls,
                                       redBalls: redBalls,
-                                      singleNumbers: singleNumbers,
-                                      pick3Numbers: pick3Numbers
+                                      singleNumbers: singleNumbers
                                     },
                                     jackpot: latestResult.jackpot?.toString() || '',
                                     winners: {
@@ -1417,8 +1357,7 @@ const AdminPredictions: React.FC = () => {
                                     winningNumbers: {
                                       whiteBalls: [],
                                       redBalls: [],
-                                      singleNumbers: [],
-                                      pick3Numbers: []
+                                      singleNumbers: []
                                     },
                                     jackpot: '',
                                     winners: {
@@ -1443,8 +1382,7 @@ const AdminPredictions: React.FC = () => {
                                   winningNumbers: {
                                     whiteBalls: [],
                                     redBalls: [],
-                                    singleNumbers: [],
-                                    pick3Numbers: []
+                                    singleNumbers: []
                                   },
                                   jackpot: '',
                                   winners: {
@@ -1584,20 +1522,16 @@ const AdminPredictions: React.FC = () => {
                             const redBalls = Array.isArray(latestResult.winningNumbers?.redBalls) 
                               ? latestResult.winningNumbers.redBalls 
                               : (latestResult.winningNumbers?.redBalls ? [latestResult.winningNumbers.redBalls] : []);
-                            const singleNumbers = Array.isArray(latestResult.winningNumbersSingle) 
-                              ? latestResult.winningNumbersSingle 
+                            const singleNumbers = Array.isArray(latestResult.winningNumbersSingle)
+                              ? latestResult.winningNumbersSingle
                               : (latestResult.winningNumbersSingle ? [latestResult.winningNumbersSingle] : []);
-                            const pick3Numbers = Array.isArray(latestResult.winningNumbersPick3) 
-                              ? latestResult.winningNumbersPick3 
-                              : (latestResult.winningNumbersPick3 ? [latestResult.winningNumbersPick3] : []);
-                            
+
                             const editData = {
                               drawDate: new Date(latestResult.drawDate).toISOString().split('T')[0],
                               winningNumbers: {
                                 whiteBalls: whiteBalls,
                                 redBalls: redBalls,
-                                singleNumbers: singleNumbers,
-                                pick3Numbers: pick3Numbers
+                                singleNumbers: singleNumbers
                               },
                               jackpot: latestResult.jackpot?.toString() || '',
                               winners: {
@@ -1632,8 +1566,7 @@ const AdminPredictions: React.FC = () => {
                               winningNumbers: {
                                 whiteBalls: [],
                                 redBalls: [],
-                                singleNumbers: [],
-                                pick3Numbers: []
+                                singleNumbers: []
                               },
                               jackpot: '',
                               winners: {
@@ -1687,11 +1620,6 @@ const AdminPredictions: React.FC = () => {
                               } else if (result.winningNumbersSingle) {
                                 winningNumbers = {
                                   main: result.winningNumbersSingle,
-                                  special: []
-                                };
-                              } else if (result.winningNumbersPick3) {
-                                winningNumbers = {
-                                  main: result.winningNumbersPick3,
                                   special: []
                                 };
                               }
@@ -1748,28 +1676,23 @@ const AdminPredictions: React.FC = () => {
                                         const redBalls = Array.isArray(result.winningNumbers?.redBalls) 
                                           ? result.winningNumbers.redBalls 
                                           : (result.winningNumbers?.redBalls ? [result.winningNumbers.redBalls] : []);
-                                        const singleNumbers = Array.isArray(result.winningNumbersSingle) 
-                                          ? result.winningNumbersSingle 
+                                        const singleNumbers = Array.isArray(result.winningNumbersSingle)
+                                          ? result.winningNumbersSingle
                                           : (result.winningNumbersSingle ? [result.winningNumbersSingle] : []);
-                                        const pick3Numbers = Array.isArray(result.winningNumbersPick3) 
-                                          ? result.winningNumbersPick3 
-                                          : (result.winningNumbersPick3 ? [result.winningNumbersPick3] : []);
-                                        
+
                                         console.log('📥 Loading result for edit:', {
                                           original: result.winningNumbers,
                                           whiteBalls,
                                           redBalls,
-                                          singleNumbers,
-                                          pick3Numbers
+                                          singleNumbers
                                         });
-                                        
+
                                         const editData = {
                                           drawDate: new Date(result.drawDate).toISOString().split('T')[0],
                                           winningNumbers: {
                                             whiteBalls: whiteBalls,
                                             redBalls: redBalls,
-                                            singleNumbers: singleNumbers,
-                                            pick3Numbers: pick3Numbers
+                                            singleNumbers: singleNumbers
                                           },
                                           jackpot: result.jackpot?.toString() || '',
                                           winners: {
@@ -1902,6 +1825,7 @@ const AdminPredictions: React.FC = () => {
                     <label className="form-label fw-bold">Winning Numbers</label>
                     {(() => {
                       const config = lotteryConfigs[selectedPredictionForResult.lotteryType];
+                      if (!config) return null;
                       if (config.type === 'double') {
                         return (
                           <>
@@ -2012,45 +1936,6 @@ const AdminPredictions: React.FC = () => {
                             />
                           </div>
                         );
-                      } else if (config.type === 'pick3') {
-                        return (
-                          <div className="mb-3">
-                            <label className="form-label">{config.numbers.label}</label>
-                            <NumberSelector
-                              min={config.numbers.min}
-                              max={config.numbers.max}
-                              selected={resultData.winningNumbers.pick3Numbers}
-                              onToggle={(num) => {
-                                const current = resultData.winningNumbers.pick3Numbers;
-                                // For Pick 3 Results, we always allow adding duplicates and maintain order
-                                setResultData({
-                                  ...resultData,
-                                  winningNumbers: {
-                                    ...resultData.winningNumbers,
-                                    pick3Numbers: [...current, num]
-                                  }
-                                });
-                              }}
-                              onRemoveIndex={(index) => {
-                                const current = resultData.winningNumbers.pick3Numbers;
-                                setResultData({
-                                  ...resultData,
-                                  winningNumbers: {
-                                    ...resultData.winningNumbers,
-                                    pick3Numbers: current.filter((_, i) => i !== index)
-                                  }
-                                });
-                              }}
-                              isPick3={true}
-
-                              onClear={() => setResultData({
-                                ...resultData,
-                                winningNumbers: { ...resultData.winningNumbers, pick3Numbers: [] }
-                              })}
-                              label="Balls"
-                            />
-                          </div>
-                        );
                       }
                       return null;
                     })()}
@@ -2077,38 +1962,7 @@ const AdminPredictions: React.FC = () => {
                   <div className="mb-3">
                     <label className="form-label fw-bold">Winners</label>
                     <div className="row g-3">
-                      {selectedPredictionForResult.lotteryType === 'pick3' ? (
-                        <>
-                          <div className="col-md-6">
-                            <label className="form-label">Exact Match</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="Number of exact match winners"
-                              value={resultData.winners.exact}
-                              onChange={(e) => setResultData({
-                                ...resultData,
-                                winners: { ...resultData.winners, exact: e.target.value }
-                              })}
-                              min="0"
-                            />
-                          </div>
-                          <div className="col-md-6">
-                            <label className="form-label">Any Order</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="Number of any order winners"
-                              value={resultData.winners.any}
-                              onChange={(e) => setResultData({
-                                ...resultData,
-                                winners: { ...resultData.winners, any: e.target.value }
-                              })}
-                              min="0"
-                            />
-                          </div>
-                        </>
-                      ) : (
+                      {(
                         <>
                           <div className="col-md-6">
                             <label className="form-label">Jackpot Winners</label>
@@ -2232,6 +2086,7 @@ const AdminPredictions: React.FC = () => {
                     <label className="form-label fw-bold">Winning Numbers</label>
                     {(() => {
                       const config = lotteryConfigs[selectedPredictionForResult.lotteryType];
+                      if (!config) return null;
                       if (config.type === 'double') {
                         return (
                           <>
@@ -2342,45 +2197,6 @@ const AdminPredictions: React.FC = () => {
                             />
                           </div>
                         );
-                      } else if (config.type === 'pick3') {
-                        return (
-                          <div className="mb-3">
-                            <label className="form-label">{config.numbers.label}</label>
-                            <NumberSelector
-                              min={config.numbers.min}
-                              max={config.numbers.max}
-                              selected={resultData.winningNumbers.pick3Numbers}
-                              onToggle={(num) => {
-                                const current = resultData.winningNumbers.pick3Numbers;
-                                // For Pick 3 Results, we always allow adding duplicates and maintain order
-                                setResultData({
-                                  ...resultData,
-                                  winningNumbers: {
-                                    ...resultData.winningNumbers,
-                                    pick3Numbers: [...current, num]
-                                  }
-                                });
-                              }}
-                              onRemoveIndex={(index) => {
-                                const current = resultData.winningNumbers.pick3Numbers;
-                                setResultData({
-                                  ...resultData,
-                                  winningNumbers: {
-                                    ...resultData.winningNumbers,
-                                    pick3Numbers: current.filter((_, i) => i !== index)
-                                  }
-                                });
-                              }}
-                              isPick3={true}
-
-                              onClear={() => setResultData({
-                                ...resultData,
-                                winningNumbers: { ...resultData.winningNumbers, pick3Numbers: [] }
-                              })}
-                              label="Balls"
-                            />
-                          </div>
-                        );
                       }
                       return null;
                     })()}
@@ -2403,39 +2219,7 @@ const AdminPredictions: React.FC = () => {
                   <div className="mb-3">
                     <label className="form-label fw-bold">Winners</label>
                     {(() => {
-                      const config = lotteryConfigs[selectedPredictionForResult.lotteryType];
-                      if (config.type === 'pick3') {
-                        return (
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="form-label">Exact</label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                value={resultData.winners.exact}
-                                onChange={(e) => setResultData({
-                                  ...resultData,
-                                  winners: { ...resultData.winners, exact: e.target.value }
-                                })}
-                                min="0"
-                              />
-                            </div>
-                            <div className="col-md-6">
-                              <label className="form-label">Any</label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                value={resultData.winners.any}
-                                onChange={(e) => setResultData({
-                                  ...resultData,
-                                  winners: { ...resultData.winners, any: e.target.value }
-                                })}
-                                min="0"
-                              />
-                            </div>
-                          </div>
-                        );
-                      } else {
+                      {
                         return (
                           <div className="row">
                             <div className="col-md-6">
@@ -2557,8 +2341,7 @@ const AdminPredictions: React.FC = () => {
                               // Clear numbers when type changes
                               whiteBalls: [],
                               redBalls: [],
-                              singleNumbers: [],
-                              pick3Numbers: []
+                              singleNumbers: []
                             }));
                             // Clear error when field changes
                             if (fieldErrors.lotteryType) {
@@ -2776,20 +2559,6 @@ const AdminPredictions: React.FC = () => {
                             onClear={() => clearNumbers('singleNumbers')}
                             label={config.numbers.label}
                           />
-                        );
-                      } else if (config.type === 'pick3') {
-                        return (
-                          <NumberSelector
-                            min={config.numbers.min}
-                            max={config.numbers.max}
-                            selected={newPrediction.pick3Numbers}
-                            onToggle={(num) => toggleNumber(num, 'pick3Numbers')}
-                            onRemoveIndex={(idx) => removeNumberAtIndex(idx, 'pick3Numbers')}
-                            onClear={() => clearNumbers('pick3Numbers')}
-                            label={config.numbers.label}
-                            isPick3={true}
-                          />
-
                         );
                       }
                       return null;
@@ -2871,8 +2640,7 @@ const AdminPredictions: React.FC = () => {
                               // Clear numbers when type changes
                               whiteBalls: [],
                               redBalls: [],
-                              singleNumbers: [],
-                              pick3Numbers: []
+                              singleNumbers: []
                             }));
                             // Clear error when field changes
                             if (fieldErrors.lotteryType) {
@@ -3090,20 +2858,6 @@ const AdminPredictions: React.FC = () => {
                             onClear={() => clearNumbers('singleNumbers')}
                             label={config.numbers.label}
                           />
-                        );
-                      } else if (config.type === 'pick3') {
-                        return (
-                          <NumberSelector
-                            min={config.numbers.min}
-                            max={config.numbers.max}
-                            selected={newPrediction.pick3Numbers}
-                            onToggle={(num) => toggleNumber(num, 'pick3Numbers')}
-                            onRemoveIndex={(idx) => removeNumberAtIndex(idx, 'pick3Numbers')}
-                            onClear={() => clearNumbers('pick3Numbers')}
-                            label={config.numbers.label}
-                            isPick3={true}
-                          />
-
                         );
                       }
                       return null;

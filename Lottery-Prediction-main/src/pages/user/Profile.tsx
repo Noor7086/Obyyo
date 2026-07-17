@@ -185,7 +185,7 @@ const Profile: React.FC = () => {
     // Phone number is non-editable, so no validation needed
 
     // Validate selectedLottery
-    const validLotteries = ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'];
+    const validLotteries = ['gopher5', 'lottoamerica', 'megamillion', 'powerball'];
     if (!formData.selectedLottery) {
       newErrors.selectedLottery = 'Please select a preferred lottery';
     } else if (!validLotteries.includes(formData.selectedLottery)) {
@@ -442,7 +442,6 @@ const Profile: React.FC = () => {
 
   const lotteryTypes: { value: LotteryType; label: string }[] = [
     { value: 'gopher5', label: 'Gopher 5' },
-    { value: 'pick3', label: 'Pick 3' },
     { value: 'lottoamerica', label: 'Lotto America' },
     { value: 'megamillion', label: 'Mega Million' },
     { value: 'powerball', label: 'Powerball' }

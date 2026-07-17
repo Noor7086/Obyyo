@@ -4,6 +4,7 @@ const predictionSchema = new mongoose.Schema({
   lotteryType: {
     type: String,
     required: [true, 'Lottery type is required'],
+    // 'pick3' is discontinued; kept in the enum only for legacy documents
     enum: ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball']
   },
   drawDate: {
@@ -30,7 +31,7 @@ const predictionSchema = new mongoose.Schema({
     type: Number,
     required: false
   }],
-  // For Pick 3 type lotteries
+  // Legacy: Pick 3 is discontinued; field kept only for old documents
   viableNumbersPick3: [{
     type: Number,
     required: false
@@ -100,7 +101,6 @@ predictionSchema.index({ isActive: 1, drawDate: 1 });
 predictionSchema.virtual('lotteryDisplayName').get(function () {
   const lotteryNames = {
     'gopher5': 'Gopher 5 (Minnesota)',
-    'pick3': 'Pick 3 (Minnesota)',
     'lottoamerica': 'Lotto America (USA)',
     'megamillion': 'Mega Millions (USA)',
     'powerball': 'Powerball (USA)'
@@ -176,19 +176,6 @@ predictionSchema.methods.getViableNumbers = function () {
       }
       return [];
 
-    case 'pick3':
-      // Legacy support - Check non-viable first and return it directly
-      const nonViablePick3 = self.nonViableNumbersPick3 || this.nonViableNumbersPick3;
-      if (nonViablePick3 && Array.isArray(nonViablePick3) && nonViablePick3.length > 0) {
-        return Array.from(nonViablePick3);
-      }
-
-      const viablePick3 = self.viableNumbersPick3 || this.viableNumbersPick3;
-      if (viablePick3 && Array.isArray(viablePick3) && viablePick3.length > 0) {
-        return Array.from(viablePick3);
-      }
-      return [];
-
     default:
       return [];
   }
@@ -212,11 +199,10 @@ predictionSchema.methods.getNonViableNumbers = function () {
         redBalls: this.nonViableNumbers?.redBalls || []
       };
     case 'gopher5':
-    case 'pick3':
       if (Array.isArray(viable)) {
         return [];
       }
-      return this.nonViableNumbersSingle || this.nonViableNumbersPick3 || [];
+      return this.nonViableNumbersSingle || [];
     default:
       return [];
   }

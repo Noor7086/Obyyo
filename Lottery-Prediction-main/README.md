@@ -11,7 +11,7 @@ Obyyo is a lottery prediction platform that helps players avoid "low vibration" 
 - **7-Day Free Trial**: Test the service with your selected lottery
 - **Instant Notifications**: Real-time alerts for new predictions
 - **Number Generator**: Create winning combinations from viable numbers
-- **Multi-Lottery Support**: Gopher 5, Pick 3, Lotto America, Mega Million, Powerball
+- **Multi-Lottery Support**: Gopher 5, Lotto America, Mega Million, Powerball
 
 ## 🏗️ Architecture
 
@@ -166,10 +166,9 @@ lottery-prediction/
 
 ### Supported Lotteries
 1. **Gopher 5 (Minnesota)** - $1/prediction
-2. **Pick 3 (Minnesota)** - $1/prediction
-3. **Lotto America (USA)** - $1/prediction
-4. **Mega Million (USA)** - $2/prediction
-5. **Powerball (USA)** - $2/prediction
+2. **Lotto America (USA)** - $1/prediction
+3. **Mega Million (USA)** - $3/prediction
+4. **Powerball (USA)** - $2/prediction
 
 ## 🔧 Development
 

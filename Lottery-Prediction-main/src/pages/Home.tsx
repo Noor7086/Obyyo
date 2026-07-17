@@ -16,11 +16,11 @@ const Home: React.FC = () => {
   // SEO Configuration
   useSEO({
     title: 'Obyyo - Lottery Prediction Platform | 80-100% Accurate Predictions',
-    description: 'Enhance your lottery winning odds with 80-100% accurate predictions. Get 7 days free trial for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America. No credit card required.',
-    keywords: 'lottery prediction, lottery numbers, winning odds, powerball, megamillion, gopher5, pick3, lotto america, free trial, lottery analysis',
+    description: 'Enhance your lottery winning odds with 80-100% accurate predictions. Get 7 days free trial for Powerball, Mega Million, Gopher 5, and Lotto America. No credit card required.',
+    keywords: 'lottery prediction, lottery numbers, winning odds, powerball, megamillion, gopher5, lotto america, free trial, lottery analysis',
     url: 'https://obyyo.com/',
     ogTitle: 'Obyyo - Lottery Prediction Platform | 80-100% Accurate Predictions',
-    ogDescription: 'Enhance your lottery winning odds with 80-100% accurate predictions. Get 7 days free trial for Powerball, Mega Million, Gopher 5, Pick 3, and Lotto America.',
+    ogDescription: 'Enhance your lottery winning odds with 80-100% accurate predictions. Get 7 days free trial for Powerball, Mega Million, Gopher 5, and Lotto America.',
     ogImage: 'https://obyyo.com/logo.png',
     canonical: 'https://obyyo.com/'
   });
@@ -99,14 +99,6 @@ const Home: React.FC = () => {
       icon: '🎯'
     },
     {
-      type: 'pick3',
-      name: 'Pick 3',
-      state: 'Minnesota',
-      description: 'Pick 3 numbers from 0-9',
-      price: 1,
-      icon: '🎲'
-    },
-    {
       type: 'lottoamerica',
       name: 'Lotto America',
       state: 'USA',
@@ -119,7 +111,7 @@ const Home: React.FC = () => {
       name: 'Mega Million',
       state: 'USA',
       description: 'Pick 5 from 70 + 1 from 25',
-      price: 5,
+      price: 3,
       icon: '💰'
     },
     {

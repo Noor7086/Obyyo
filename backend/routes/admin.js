@@ -247,17 +247,6 @@ router.post('/predictions', protect, authorize('admin'), validatePredictionUploa
       console.log('✓ Setting viableNumbersSingle (legacy):', numbers);
     }
 
-    if (predictionData.nonViableNumbersPick3 && Array.isArray(predictionData.nonViableNumbersPick3)) {
-      const numbers = predictionData.nonViableNumbersPick3.filter(n => n != null && n !== undefined && !isNaN(n) && n >= 0);
-      finalData.nonViableNumbersPick3 = numbers;
-      console.log('✓ Setting nonViableNumbersPick3:', numbers);
-    } else if (predictionData.viableNumbersPick3 && Array.isArray(predictionData.viableNumbersPick3)) {
-      // Legacy support
-      const numbers = predictionData.viableNumbersPick3.filter(n => n != null && n !== undefined && !isNaN(n) && n >= 0);
-      finalData.viableNumbersPick3 = numbers;
-      console.log('✓ Setting viableNumbersPick3 (legacy):', numbers);
-    }
-
     // Create with ALL data including nested objects
     console.log('📝 Creating prediction with finalData:', JSON.stringify(finalData, null, 2));
     const prediction = await Prediction.create(finalData);
@@ -266,7 +255,6 @@ router.post('/predictions', protect, authorize('admin'), validatePredictionUploa
     const saved = await Prediction.findById(prediction._id).lean();
     console.log('✅ VERIFIED SAVED - viableNumbers:', JSON.stringify(saved.viableNumbers, null, 2));
     console.log('✅ VERIFIED SAVED - viableNumbersSingle:', saved.viableNumbersSingle);
-    console.log('✅ VERIFIED SAVED - viableNumbersPick3:', saved.viableNumbersPick3);
 
     if (!saved.viableNumbers || (saved.viableNumbers.whiteBalls && saved.viableNumbers.whiteBalls.length === 0 && saved.viableNumbers.redBalls && saved.viableNumbers.redBalls.length === 0)) {
       console.error('❌ ERROR: Numbers were not saved correctly!');
@@ -646,13 +634,6 @@ router.put('/predictions/:id', protect, authorize('admin'), async (req, res) => 
       delete updateData.viableNumbersSingle;
     }
 
-    if (updateData.viableNumbersPick3 && Array.isArray(updateData.viableNumbersPick3)) {
-      const numbers = updateData.viableNumbersPick3.filter(n => n != null && n !== undefined && !isNaN(n) && n >= 0);
-      prediction.set('viableNumbersPick3', numbers);
-      console.log('✓ Updating viableNumbersPick3:', numbers);
-      delete updateData.viableNumbersPick3;
-    }
-
     // Apply remaining fields
     Object.assign(prediction, updateData);
     await prediction.save();
@@ -661,7 +642,6 @@ router.put('/predictions/:id', protect, authorize('admin'), async (req, res) => 
     const saved = await Prediction.findById(id).lean();
     console.log('✅ VERIFIED UPDATED - viableNumbers:', JSON.stringify(saved.viableNumbers, null, 2));
     console.log('✅ VERIFIED UPDATED - viableNumbersSingle:', saved.viableNumbersSingle);
-    console.log('✅ VERIFIED UPDATED - viableNumbersPick3:', saved.viableNumbersPick3);
 
     // Verify what was saved
     const updatedPrediction = await Prediction.findById(id).lean();
@@ -763,17 +743,10 @@ router.post('/predictions/:id/result', protect, authorize('admin'), async (req, 
       };
       // Clear other number types
       resultData.winningNumbersSingle = [];
-      resultData.winningNumbersPick3 = [];
     } else if (winningNumbers.singleNumbers) {
       resultData.winningNumbersSingle = winningNumbers.singleNumbers;
       // Clear other number types
       resultData.winningNumbers = { whiteBalls: [], redBalls: [] };
-      resultData.winningNumbersPick3 = [];
-    } else if (winningNumbers.pick3Numbers) {
-      resultData.winningNumbersPick3 = winningNumbers.pick3Numbers;
-      // Clear other number types
-      resultData.winningNumbers = { whiteBalls: [], redBalls: [] };
-      resultData.winningNumbersSingle = [];
     }
 
     // Create result
@@ -900,8 +873,7 @@ router.get('/results/recent', async (req, res) => {
         ourPrediction,
         actualResult: resultDoc ? {
           winningNumbers: resultDoc.winningNumbers,
-          winningNumbersSingle: resultDoc.winningNumbersSingle,
-          winningNumbersPick3: resultDoc.winningNumbersPick3
+          winningNumbersSingle: resultDoc.winningNumbersSingle
         } : null
       });
     }
@@ -946,8 +918,7 @@ router.get('/results/prediction/:id', async (req, res) => {
           ourPrediction,
           actualResult: resultDoc ? {
             winningNumbers: resultDoc.winningNumbers,
-            winningNumbersSingle: resultDoc.winningNumbersSingle,
-            winningNumbersPick3: resultDoc.winningNumbersPick3
+            winningNumbersSingle: resultDoc.winningNumbersSingle
           } : null
         }
       }
@@ -1048,17 +1019,10 @@ router.put('/results/:id', async (req, res, next) => {
         };
         // Clear other number types
         result.winningNumbersSingle = [];
-        result.winningNumbersPick3 = [];
       } else if (winningNumbers.singleNumbers) {
         result.winningNumbersSingle = winningNumbers.singleNumbers;
         // Clear other number types
         result.winningNumbers = { whiteBalls: [], redBalls: [] };
-        result.winningNumbersPick3 = [];
-      } else if (winningNumbers.pick3Numbers) {
-        result.winningNumbersPick3 = winningNumbers.pick3Numbers;
-        // Clear other number types
-        result.winningNumbers = { whiteBalls: [], redBalls: [] };
-        result.winningNumbersSingle = [];
       }
     }
 

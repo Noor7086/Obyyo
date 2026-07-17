@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { FaBolt, FaMoneyBillWave, FaFlag, FaBullseye, FaDice } from 'react-icons/fa';
+import { FaBolt, FaMoneyBillWave, FaFlag, FaBullseye } from 'react-icons/fa';
 import TrialStatus from '../components/TrialStatus';
 
 const Pricing: React.FC = () => {
@@ -22,7 +22,7 @@ const Pricing: React.FC = () => {
       location: "USA",
       icon: <FaMoneyBillWave className="text-success" />,
       numberSelection: "Non-Viable numbers of 10–20 Red balls + 6–10 Blue Mega balls",
-      price: 5,
+      price: 3,
       lotteryType: "megamillion",
       color: "info"
     },
@@ -46,18 +46,6 @@ const Pricing: React.FC = () => {
       price: 1,
       lotteryType: "gopher5",
       color: "success"
-    }
-  ];
-
-  const dailyGames = [
-    {
-      name: "Pick 3",
-      location: "Minnesota",
-      icon: <FaDice className="text-dark" />,
-      numberSelection: "Non-Viable numbers of 2–3 Red balls",
-      price: 1,
-      lotteryType: "pick3",
-      color: "primary"
     }
   ];
 
@@ -130,40 +118,19 @@ const Pricing: React.FC = () => {
         </Row>
       </div>
 
-      {/* State & Daily Games Grid */}
+      {/* State Lotteries */}
       <div className="py-5 border-top">
-        <Row className="g-5">
-          {/* State Lotteries */}
-          <Col lg={6}>
-            <div className="text-center text-lg-start mb-5">
-              <Badge bg="success" className="px-3 py-2 mb-3 rounded-pill text-uppercase tracking-wider fw-bold">Regional Games</Badge>
-              <h2 className="display-6 fw-bold">State Lotteries</h2>
-              <p className="text-muted">State-specific lottery games with better odds</p>
-            </div>
-            <Row className="g-4">
-              {stateLotteries.map((lottery, index) => (
-                <Col md={12} key={index}>
-                  <LotteryCard lottery={lottery} />
-                </Col>
-              ))}
-            </Row>
-          </Col>
-
-          {/* Daily Games */}
-          <Col lg={6}>
-            <div className="text-center text-lg-start mb-5">
-              <Badge bg="info" className="px-3 py-2 mb-3 rounded-pill text-uppercase tracking-wider fw-bold">Frequent Games</Badge>
-              <h2 className="display-6 fw-bold">Daily Games</h2>
-              <p className="text-muted">Games with multiple daily drawings</p>
-            </div>
-            <Row className="g-4">
-              {dailyGames.map((lottery, index) => (
-                <Col md={12} key={index}>
-                  <LotteryCard lottery={lottery} />
-                </Col>
-              ))}
-            </Row>
-          </Col>
+        <div className="text-center mb-5">
+          <Badge bg="success" className="px-3 py-2 mb-3 rounded-pill text-uppercase tracking-wider fw-bold">Regional Games</Badge>
+          <h2 className="display-6 fw-bold">State Lotteries</h2>
+          <p className="text-muted">State-specific lottery games with better odds</p>
+        </div>
+        <Row className="g-4 justify-content-center">
+          {stateLotteries.map((lottery, index) => (
+            <Col lg={4} md={6} key={index}>
+              <LotteryCard lottery={lottery} />
+            </Col>
+          ))}
         </Row>
       </div>
     </Container>

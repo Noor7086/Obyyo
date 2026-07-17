@@ -9,6 +9,7 @@ const resultSchema = new mongoose.Schema({
   lotteryType: {
     type: String,
     required: [true, 'Lottery type is required'],
+    // 'pick3' is discontinued; kept in the enum only for legacy documents
     enum: ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball']
   },
   drawDate: {
@@ -31,7 +32,7 @@ const resultSchema = new mongoose.Schema({
     type: Number,
     required: false
   }],
-  // For Pick 3 type lotteries
+  // Legacy: Pick 3 is discontinued; field kept only for old documents
   winningNumbersPick3: [{
     type: Number,
     required: false

@@ -65,6 +65,7 @@ const userSchema = new mongoose.Schema({
   },
   selectedLottery: {
     type: String,
+    // 'pick3' is discontinued; kept in the enum only so existing users with it can still save
     enum: ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball'],
     required: [true, 'Please select a lottery for your trial']
   },

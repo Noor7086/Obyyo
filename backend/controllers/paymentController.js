@@ -153,7 +153,6 @@ export const getAdminPayments = async (req, res, next) => {
             if (!prediction?.lotteryType) return 'N/A';
             const lotteryNames = {
               'gopher5': 'Gopher 5 (Minnesota)',
-              'pick3': 'Pick 3 (Minnesota)',
               'lottoamerica': 'Lotto America (USA)',
               'megamillion': 'Mega Millions (USA)',
               'powerball': 'Powerball (USA)'

@@ -8,8 +8,8 @@ const router = express.Router();
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    // Try to fetch from database first
-    const dbLotteries = await Lottery.find({ isActive: true }).sort({ name: 1 });
+    // Try to fetch from database first (Pick 3 is no longer supported)
+    const dbLotteries = await Lottery.find({ isActive: true, code: { $ne: 'PICK3' } }).sort({ name: 1 });
     
     if (dbLotteries && dbLotteries.length > 0) {
       // Format database lotteries to match expected format
@@ -63,32 +63,6 @@ router.get('/', async (req, res) => {
         }
       },
       {
-        id: 'pick3',
-        name: 'Pick 3',
-        code: 'PICK3',
-        type: 'single',
-        description: 'Pick 3 numbers from 0-9',
-        price: 1,
-        currency: 'USD',
-        drawSchedule: [
-          { day: 'monday', time: '18:00' },
-          { day: 'tuesday', time: '18:00' },
-          { day: 'wednesday', time: '18:00' },
-          { day: 'thursday', time: '18:00' },
-          { day: 'friday', time: '18:00' },
-          { day: 'saturday', time: '18:00' },
-          { day: 'sunday', time: '18:00' }
-        ],
-        isActive: true,
-        state: 'Minnesota',
-        country: 'USA',
-        officialWebsite: 'https://www.mnlottery.com/games/draw-games/pick-3',
-        singleSelection: {
-          pickCount: 3,
-          totalNumbers: 10
-        }
-      },
-      {
         id: 'lottoamerica',
         name: 'Lotto America',
         code: 'LOTTOAMERICA',
@@ -121,7 +95,7 @@ router.get('/', async (req, res) => {
         code: 'MEGAMILLION',
         type: 'double',
         description: 'Pick 5 from 70 + 1 from 25',
-        price: 5,
+        price: 3,
         currency: 'USD',
         drawSchedule: [
           { day: 'tuesday', time: '23:00' },
