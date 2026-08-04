@@ -1,0 +1,212 @@
+import mongoose from 'mongoose';
+
+const predictionSchema = new mongoose.Schema({
+  lotteryType: {
+    type: String,
+    required: [true, 'Lottery type is required'],
+    // 'pick3' is discontinued; kept in the enum only for legacy documents
+    enum: ['gopher5', 'pick3', 'lottoamerica', 'megamillion', 'powerball']
+  },
+  drawDate: {
+    type: Date,
+    required: [true, 'Draw date is required']
+  },
+  drawTime: {
+    type: String,
+    required: [true, 'Draw time is required']
+  },
+  // Viable numbers - the numbers that ARE recommended (will appear in draw)
+  viableNumbers: {
+    whiteBalls: [{
+      type: Number,
+      required: false
+    }],
+    redBalls: [{
+      type: Number,
+      required: false
+    }]
+  },
+  // For single selection lotteries like Gopher 5
+  viableNumbersSingle: [{
+    type: Number,
+    required: false
+  }],
+  // Legacy: Pick 3 is discontinued; field kept only for old documents
+  viableNumbersPick3: [{
+    type: Number,
+    required: false
+  }],
+  // Legacy support - keep nonViableNumbers for backward compatibility
+  nonViableNumbers: {
+    whiteBalls: {
+      type: [Number],
+      default: []
+    },
+    redBalls: {
+      type: [Number],
+      default: []
+    }
+  },
+  nonViableNumbersSingle: {
+    type: [Number],
+    default: []
+  },
+  nonViableNumbersPick3: {
+    type: [Number],
+    default: []
+  },
+  price: {
+    type: Number,
+    required: [true, 'Price is required'],
+    min: [0, 'Price cannot be negative']
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  downloadCount: {
+    type: Number,
+    default: 0
+  },
+  purchaseCount: {
+    type: Number,
+    default: 0
+  },
+  accuracy: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: null
+  },
+  notes: {
+    type: String,
+    maxlength: [500, 'Notes cannot exceed 500 characters']
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Index for efficient queries
+predictionSchema.index({ lotteryType: 1, drawDate: 1 });
+predictionSchema.index({ isActive: 1, drawDate: 1 });
+
+// Virtual for lottery display name
+predictionSchema.virtual('lotteryDisplayName').get(function () {
+  const lotteryNames = {
+    'gopher5': 'Gopher 5 (Minnesota)',
+    'lottoamerica': 'Lotto America (USA)',
+    'megamillion': 'Mega Millions (USA)',
+    'powerball': 'Powerball (USA)'
+  };
+  return lotteryNames[this.lotteryType] || this.lotteryType;
+});
+
+// Method to get viable numbers based on lottery type (preferred)
+// Method to get viable numbers based on lottery type (preferred)
+predictionSchema.methods.getViableNumbers = function () {
+  // Convert to plain object if it's a Mongoose document (for consistent access)
+  const self = this.toObject ? this.toObject() : this;
+
+  // NOTE: User requested to show "Non Viable Numbers" in the UI section labeled "Non Viable"
+  // Previously, this calculated "Viable" (Total - NonViable). 
+  // Now, we simply return the NonViable numbers directly so they are displayed.
+
+  switch (this.lotteryType) {
+    case 'powerball':
+    case 'megamillion':
+    case 'lottoamerica':
+      // Legacy support: if viableNumbers doesn't exist or is empty, check nonViableNumbers
+      // Treat nonViableNumbers as viableNumbers for backward compatibility
+      // AND for the requested feature: Show the non-viable numbers directly
+      if ((self.nonViableNumbers && typeof self.nonViableNumbers === 'object') ||
+        (this.nonViableNumbers && typeof this.nonViableNumbers === 'object')) {
+        const nonViable = self.nonViableNumbers || this.nonViableNumbers;
+        const whiteBalls = nonViable.whiteBalls ?
+          (Array.isArray(nonViable.whiteBalls) ?
+            (nonViable.whiteBalls.length ? Array.from(nonViable.whiteBalls) : []) : []) : [];
+        const redBalls = nonViable.redBalls ?
+          (Array.isArray(nonViable.redBalls) ?
+            (nonViable.redBalls.length ? Array.from(nonViable.redBalls) : []) : []) : [];
+
+        // Return nonViableNumbers directly
+        if (whiteBalls.length > 0 || redBalls.length > 0) {
+          return {
+            whiteBalls: whiteBalls,
+            redBalls: redBalls
+          };
+        }
+      }
+
+      // If explicit viableNumbers exist (and we didn't use nonViable above), use them
+      if (self.viableNumbers && typeof self.viableNumbers === 'object') {
+        const whiteBalls = self.viableNumbers.whiteBalls ?
+          (Array.isArray(self.viableNumbers.whiteBalls) ? self.viableNumbers.whiteBalls : []) : [];
+        const redBalls = self.viableNumbers.redBalls ?
+          (Array.isArray(self.viableNumbers.redBalls) ? self.viableNumbers.redBalls : []) : [];
+        if (whiteBalls.length > 0 || redBalls.length > 0) {
+          return {
+            whiteBalls: whiteBalls,
+            redBalls: redBalls
+          };
+        }
+      }
+
+      return {
+        whiteBalls: [],
+        redBalls: []
+      };
+
+    case 'gopher5':
+      // Legacy support - Check non-viable first and return it directly
+      const nonViableSingle = self.nonViableNumbersSingle || this.nonViableNumbersSingle;
+      if (nonViableSingle && Array.isArray(nonViableSingle) && nonViableSingle.length > 0) {
+        return Array.from(nonViableSingle);
+      }
+
+      const viableSingle = self.viableNumbersSingle || this.viableNumbersSingle;
+      if (viableSingle && Array.isArray(viableSingle) && viableSingle.length > 0) {
+        return Array.from(viableSingle);
+      }
+      return [];
+
+    default:
+      return [];
+  }
+};
+
+// Legacy method - kept for backward compatibility
+predictionSchema.methods.getNonViableNumbers = function () {
+  // If we have viable numbers, calculate non-viable as the inverse
+  const viable = this.getViableNumbers();
+
+  switch (this.lotteryType) {
+    case 'powerball':
+    case 'megamillion':
+    case 'lottoamerica':
+      if (typeof viable === 'object' && viable.whiteBalls) {
+        // For backward compat, return empty (we're using viable now)
+        return { whiteBalls: [], redBalls: [] };
+      }
+      return {
+        whiteBalls: this.nonViableNumbers?.whiteBalls || [],
+        redBalls: this.nonViableNumbers?.redBalls || []
+      };
+    case 'gopher5':
+      if (Array.isArray(viable)) {
+        return [];
+      }
+      return this.nonViableNumbersSingle || [];
+    default:
+      return [];
+  }
+};
+
+export default mongoose.model('Prediction', predictionSchema);
+
