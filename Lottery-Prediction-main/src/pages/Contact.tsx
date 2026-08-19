@@ -8,7 +8,7 @@ import { useSEO } from '../hooks/useSEO';
 const Contact: React.FC = () => {
   useSEO({
     title: 'Contact Us - Obyyo Lottery Prediction Platform',
-    description: 'Get in touch with Obyyo support team. Have questions? We\'re here to help! Contact us via email or phone at +1 (888) 486-5935.',
+    description: 'Get in touch with Obyyo support team. Have questions? We\'re here to help! Contact us via email or phone at +1 (866) 990-5558.',
     keywords: 'contact obyyo, support, customer service, lottery prediction help',
     url: 'https://obyyo.com/contact',
     canonical: 'https://obyyo.com/contact'
@@ -154,8 +154,8 @@ const Contact: React.FC = () => {
                   </div>
                   <div className="mb-3">
                     <i className="bi bi-telephone text-primary me-2"></i>
-                    <a href="tel:+18884865935" className="text-decoration-none">
-                      +1 (888) 486-5935
+                    <a href="tel:+18669905558" className="text-decoration-none">
+                      +1 (866) 990-5558
                     </a>
                   </div>
                   <div className="mb-3">

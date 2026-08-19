@@ -133,6 +133,12 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li className="mb-2">
+                <a href="tel:+18669905558" className="text-light text-decoration-none">
+                  <i className="bi bi-telephone me-2"></i>
+                  +1 (866) 990-5558
+                </a>
+              </li>
+              <li className="mb-2">
                 <Link to="/faq" className="text-light text-decoration-none">
                   <i className="bi bi-question-circle me-2"></i>
                   FAQ
