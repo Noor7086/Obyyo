@@ -82,6 +82,12 @@ const Footer: React.FC = () => {
                   Results
                 </Link>
               </li>
+              <li className="mb-2">
+                <Link to="/blog" className="text-light text-decoration-none">
+                  <i className="bi bi-newspaper me-2"></i>
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
 

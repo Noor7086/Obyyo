@@ -132,6 +132,8 @@ function App() {
                     <Predictions />
                   </PublicRoute>
                 } />
+                {/* Soro deep-links posts as /blog?post=<slug>, so the path never
+                    grows extra segments and an exact match is enough. */}
                 <Route path="/blog" element={
                   <PublicRoute>
                     <Blog />

@@ -7734,6 +7734,20 @@ html {
   gap: 0.5rem;
 }
 
+/* Tighter spacing between the main menu items. Scoped to the desktop navbar so
+   the stacked mobile menu keeps its roomier tap targets, and !important because
+   the base .nav-link padding above is !important too. */
+@media (min-width: 1200px) {
+  .navbar-nav.mx-auto {
+    gap: 0.5rem;
+  }
+
+  .navbar-nav.mx-auto .nav-link {
+    padding: 0.5rem 0.75rem !important;
+    margin: 0;
+  }
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 1199.98px) {
   /* Mobile navbar container */

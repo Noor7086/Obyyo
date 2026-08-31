@@ -774,6 +774,15 @@ const Navbar: React.FC = () => {
             <li className="nav-item">
               <Link
                 className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'}`}
+                to="/blog"
+                onClick={closeMobileMenu}
+              >
+                Blog
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className={`nav-link ${(isScrolled || !isHomePage) ? 'text-dark' : 'text-white'}`}
                 to="/contact"
                 onClick={closeMobileMenu}
               >
